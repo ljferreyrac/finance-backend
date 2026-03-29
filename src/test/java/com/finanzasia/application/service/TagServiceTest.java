@@ -138,21 +138,18 @@ class TagServiceTest {
 
     @Test
     void deleteTag_success() {
-        Tag existing = new Tag(tagId, userId, "deducible", "#FF5733");
-        when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.of(existing));
+        when(tagRepository.deleteByIdAndUserId(tagId, userId)).thenReturn(true);
 
         tagService.deleteTag(userId, tagId);
 
-        verify(tagRepository).deleteById(tagId);
+        verify(tagRepository).deleteByIdAndUserId(tagId, userId);
     }
 
     @Test
     void deleteTag_throwsTagNotFoundException_whenNotOwner() {
-        when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.empty());
+        when(tagRepository.deleteByIdAndUserId(tagId, userId)).thenReturn(false);
 
         assertThatThrownBy(() -> tagService.deleteTag(userId, tagId))
                 .isInstanceOf(TagNotFoundException.class);
-
-        verify(tagRepository, never()).deleteById(any());
     }
 }

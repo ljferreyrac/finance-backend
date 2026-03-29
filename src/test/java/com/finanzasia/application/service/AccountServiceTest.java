@@ -47,9 +47,9 @@ class AccountServiceTest {
 
     private Account buildAccount(UUID id, String currency, BigDecimal balance, boolean isDefault) {
         Instant now = Instant.now();
-        return new Account(id, USER_ID, "Test Account", AccountType.CHECKING,
+        return new Account(id, USER_ID, "Test Account", AccountType.BANK,
                 "BCP", currency, balance, null, null, null,
-                "#FF0000", isDefault, true, now, now);
+                "#FF0000", isDefault, true, null, now, now);
     }
 
     // ------------------------------------------------------------------
@@ -86,8 +86,8 @@ class AccountServiceTest {
         void createAccount_isDefault_clearsExisting() {
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            service.createAccount(USER_ID, "Main", AccountType.CHECKING,
-                    "BCP", "PEN", BigDecimal.ZERO, null, null, null, null, true);
+            service.createAccount(USER_ID, "Main", AccountType.BANK,
+                    "BCP", "PEN", BigDecimal.ZERO, null, null, null, null, true, null);
 
             verify(accountRepository).clearDefaultForUser(USER_ID);
         }
@@ -97,8 +97,8 @@ class AccountServiceTest {
         void createAccount_notDefault_doesNotClearExisting() {
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            service.createAccount(USER_ID, "Secondary", AccountType.SAVINGS,
-                    null, "PEN", BigDecimal.ZERO, null, null, null, null, false);
+            service.createAccount(USER_ID, "Secondary", AccountType.BANK,
+                    null, "PEN", BigDecimal.ZERO, null, null, null, null, false, null);
 
             verify(accountRepository, never()).clearDefaultForUser(any());
         }
@@ -109,8 +109,8 @@ class AccountServiceTest {
             ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
             when(accountRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
-            service.createAccount(USER_ID, "Savings", AccountType.SAVINGS,
-                    null, "PEN", BigDecimal.valueOf(500), null, null, null, null, false);
+            service.createAccount(USER_ID, "Savings", AccountType.BANK,
+                    null, "PEN", BigDecimal.valueOf(500), null, null, null, null, false, null);
 
             assertThat(captor.getValue().getCurrentBalance())
                     .isEqualByComparingTo(BigDecimal.valueOf(500));
@@ -123,7 +123,7 @@ class AccountServiceTest {
             when(accountRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
             service.createAccount(USER_ID, "Cash", AccountType.CASH,
-                    null, "PEN", null, null, null, null, null, false);
+                    null, "PEN", null, null, null, null, null, false, null);
 
             assertThat(captor.getValue().getCurrentBalance())
                     .isEqualByComparingTo(BigDecimal.ZERO);
@@ -144,7 +144,7 @@ class AccountServiceTest {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.updateAccount(USER_ID, ACCOUNT_ID,
-                    "New Name", null, null, null, null, null, true))
+                    "New Name", null, null, null, null, null, true, null))
                     .isInstanceOf(AccountNotFoundException.class);
         }
 
@@ -156,7 +156,7 @@ class AccountServiceTest {
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             Account result = service.updateAccount(USER_ID, ACCOUNT_ID,
-                    "Updated Name", "BBVA", null, null, null, null, true);
+                    "Updated Name", "BBVA", null, null, null, null, true, null);
 
             assertThat(result.getName()).isEqualTo("Updated Name");
             assertThat(result.getBank()).isEqualTo("BBVA");

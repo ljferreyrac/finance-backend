@@ -11,6 +11,7 @@ import com.finanzasia.domain.port.out.AIExtractionPort.AITransactionRaw;
 import com.finanzasia.domain.port.out.AIExtractionPort.CategoryContext;
 import com.finanzasia.domain.port.out.AccountRepository;
 import com.finanzasia.domain.port.out.CategoryRepository;
+import com.finanzasia.domain.port.out.TagRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -43,6 +44,9 @@ class ExtractTransactionsServiceTest {
     private AccountRepository accountRepository;
 
     @Mock
+    private TagRepository tagRepository;
+
+    @Mock
     private AIExtractionPort aiExtractionPort;
 
     private ExtractTransactionsService service;
@@ -53,7 +57,7 @@ class ExtractTransactionsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ExtractTransactionsService(categoryRepository, accountRepository, aiExtractionPort);
+        service = new ExtractTransactionsService(categoryRepository, accountRepository, tagRepository, aiExtractionPort);
     }
 
     // ------------------------------------------------------------------
@@ -80,7 +84,8 @@ class ExtractTransactionsServiceTest {
                 "Wong",
                 "Weekly groceries",
                 date,
-                0.92);
+                0.92,
+                List.of());
     }
 
     // ------------------------------------------------------------------
@@ -97,7 +102,7 @@ class ExtractTransactionsServiceTest {
 
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of(food));
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bcp));
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(rawExpense(CATEGORY_ID, ACCOUNT_ID, "2026-03-28")));
 
             List<TransactionDraft> result = service.extract(USER_ID, "Gaste 25.50 soles en Wong");
@@ -124,7 +129,7 @@ class ExtractTransactionsServiceTest {
 
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of(food));
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bcp));
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of());
 
             service.extract(USER_ID, "some text");
@@ -134,7 +139,7 @@ class ExtractTransactionsServiceTest {
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<AccountContext>> accCaptor = ArgumentCaptor.forClass(List.class);
 
-            verify(aiExtractionPort).extractFromText(eq("some text"), catCaptor.capture(), accCaptor.capture());
+            verify(aiExtractionPort).extractFromText(eq("some text"), catCaptor.capture(), accCaptor.capture(), anyList());
 
             assertThat(catCaptor.getValue()).hasSize(1);
             assertThat(catCaptor.getValue().get(0).id()).isEqualTo(CATEGORY_ID);
@@ -150,7 +155,7 @@ class ExtractTransactionsServiceTest {
         void returnsEmptyListWhenNoTransactions() {
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList())).thenReturn(List.of());
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList())).thenReturn(List.of());
 
             List<TransactionDraft> result = service.extract(USER_ID, "Hola como estas");
 
@@ -170,9 +175,9 @@ class ExtractTransactionsServiceTest {
             AITransactionRaw raw2 = new AITransactionRaw(
                     "INCOME", new BigDecimal("1000.00"), "PEN",
                     null, ACCOUNT_ID.toString(),
-                    null, "Salary", "2026-03-25", 0.98);
+                    null, "Salary", "2026-03-25", 0.98, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw1, raw2));
 
             List<TransactionDraft> result = service.extract(USER_ID, "some multi-transaction text");
@@ -195,9 +200,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "GIBBERISH", new BigDecimal("10.00"), "PEN",
-                    null, null, null, null, "2026-03-28", 0.5);
+                    null, null, null, null, "2026-03-28", 0.5, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             List<TransactionDraft> result = service.extract(USER_ID, "text");
@@ -213,9 +218,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     null, new BigDecimal("10.00"), "PEN",
-                    null, null, null, null, "2026-03-28", 0.5);
+                    null, null, null, null, "2026-03-28", 0.5, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             assertThat(service.extract(USER_ID, "text").get(0).type())
@@ -235,9 +240,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "EXPENSE", new BigDecimal("5.00"), "PEN",
-                    null, null, null, null, null, 0.4);
+                    null, null, null, null, null, 0.4, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             TransactionDraft draft = service.extract(USER_ID, "text").get(0);
@@ -253,9 +258,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "EXPENSE", new BigDecimal("5.00"), "PEN",
-                    null, null, null, null, "not-a-date", 0.4);
+                    null, null, null, null, "not-a-date", 0.4, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             assertThat(service.extract(USER_ID, "text").get(0).transactionDate())
@@ -275,9 +280,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "EXPENSE", new BigDecimal("50.00"), "USD",
-                    null, null, "Amazon", null, "2026-03-28", 0.85);
+                    null, null, "Amazon", null, "2026-03-28", 0.85, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             TransactionDraft draft = service.extract(USER_ID, "text").get(0);
@@ -294,9 +299,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "EXPENSE", new BigDecimal("10.00"), "PEN",
-                    "not-a-uuid", "also-not-a-uuid", null, null, "2026-03-28", 0.3);
+                    "not-a-uuid", "also-not-a-uuid", null, null, "2026-03-28", 0.3, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             TransactionDraft draft = service.extract(USER_ID, "text").get(0);
@@ -314,9 +319,9 @@ class ExtractTransactionsServiceTest {
 
             AITransactionRaw raw = new AITransactionRaw(
                     "EXPENSE", new BigDecimal("8.00"), "PEN",
-                    CATEGORY_ID.toString(), null, "Uber", null, "2026-03-28", 0.9);
+                    CATEGORY_ID.toString(), null, "Uber", null, "2026-03-28", 0.9, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
                     .thenReturn(List.of(raw));
 
             TransactionDraft draft = service.extract(USER_ID, "text").get(0);

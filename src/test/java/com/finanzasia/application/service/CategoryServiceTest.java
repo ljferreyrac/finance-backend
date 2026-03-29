@@ -200,7 +200,7 @@ class CategoryServiceTest {
             service.deleteCategory(USER_ID, CATEGORY_ID, null);
 
             verify(categoryRepository).delete(CATEGORY_ID);
-            verify(categoryRepository, never()).reassignExpenses(any(), any());
+            verify(categoryRepository, never()).reassignExpenses(any(), any(), any());
         }
 
         @Test
@@ -233,7 +233,7 @@ class CategoryServiceTest {
 
             service.deleteCategory(USER_ID, CATEGORY_ID, OTHER_CATEGORY_ID);
 
-            verify(categoryRepository).reassignExpenses(CATEGORY_ID, OTHER_CATEGORY_ID);
+            verify(categoryRepository).reassignExpenses(CATEGORY_ID, OTHER_CATEGORY_ID, USER_ID);
             verify(categoryRepository).delete(CATEGORY_ID);
         }
 
