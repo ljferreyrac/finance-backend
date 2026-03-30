@@ -15,6 +15,7 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 
@@ -52,9 +53,10 @@ public class GeminiExtractionService implements AIExtractionPort {
             String transcript,
             List<CategoryContext> categories,
             List<AccountContext> accounts,
-            List<TagContext> tags) {
+            List<TagContext> tags,
+            String userTimezone) {
 
-        String prompt = buildPrompt(transcript, categories, accounts, tags);
+        String prompt = buildPrompt(transcript, categories, accounts, tags, userTimezone);
         String requestBody = buildRequestBody(prompt);
 
         String responseBody;
@@ -81,9 +83,18 @@ public class GeminiExtractionService implements AIExtractionPort {
             String transcript,
             List<CategoryContext> categories,
             List<AccountContext> accounts,
-            List<TagContext> tags) {
+            List<TagContext> tags,
+            String userTimezone) {
 
-        String today = LocalDate.now().toString();
+        ZoneOffset offset = ZoneOffset.UTC;
+        if (userTimezone != null && !userTimezone.isBlank()) {
+            try {
+                offset = ZoneOffset.of(userTimezone);
+            } catch (Exception ex) {
+                log.warn("Invalid userTimezone '{}', falling back to UTC", userTimezone);
+            }
+        }
+        String today = LocalDate.now(offset).toString();
         String categoriesJson;
         String accountsJson;
         String tagsJson;

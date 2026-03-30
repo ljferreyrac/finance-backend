@@ -51,7 +51,7 @@ public class ExtractTransactionsService implements ExtractTransactionsFromVoiceU
     }
 
     @Override
-    public List<TransactionDraft> extract(UUID userId, String transcript) {
+    public List<TransactionDraft> extract(UUID userId, String transcript, String userTimezone) {
         List<CategoryContext> categories = categoryRepository.findAllByUser(userId)
                 .stream()
                 .map(c -> new CategoryContext(c.getId(), c.getName()))
@@ -68,7 +68,7 @@ public class ExtractTransactionsService implements ExtractTransactionsFromVoiceU
                 .toList();
 
         List<AITransactionRaw> rawResults =
-                aiExtractionPort.extractFromText(transcript, categories, accounts, tags);
+                aiExtractionPort.extractFromText(transcript, categories, accounts, tags, userTimezone);
 
         return rawResults.stream()
                 .map(raw -> toDraft(raw, categories, accounts, tags))

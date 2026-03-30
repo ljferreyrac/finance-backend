@@ -102,10 +102,10 @@ class ExtractTransactionsServiceTest {
 
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of(food));
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bcp));
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(rawExpense(CATEGORY_ID, ACCOUNT_ID, "2026-03-28")));
 
-            List<TransactionDraft> result = service.extract(USER_ID, "Gaste 25.50 soles en Wong");
+            List<TransactionDraft> result = service.extract(USER_ID, "Gaste 25.50 soles en Wong", null);
 
             assertThat(result).hasSize(1);
             TransactionDraft draft = result.get(0);
@@ -129,17 +129,17 @@ class ExtractTransactionsServiceTest {
 
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of(food));
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bcp));
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of());
 
-            service.extract(USER_ID, "some text");
+            service.extract(USER_ID, "some text", null);
 
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<CategoryContext>> catCaptor = ArgumentCaptor.forClass(List.class);
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<AccountContext>> accCaptor = ArgumentCaptor.forClass(List.class);
 
-            verify(aiExtractionPort).extractFromText(eq("some text"), catCaptor.capture(), accCaptor.capture(), anyList());
+            verify(aiExtractionPort).extractFromText(eq("some text"), catCaptor.capture(), accCaptor.capture(), anyList(), any());
 
             assertThat(catCaptor.getValue()).hasSize(1);
             assertThat(catCaptor.getValue().get(0).id()).isEqualTo(CATEGORY_ID);
@@ -155,9 +155,9 @@ class ExtractTransactionsServiceTest {
         void returnsEmptyListWhenNoTransactions() {
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList())).thenReturn(List.of());
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any())).thenReturn(List.of());
 
-            List<TransactionDraft> result = service.extract(USER_ID, "Hola como estas");
+            List<TransactionDraft> result = service.extract(USER_ID, "Hola como estas", null);
 
             assertThat(result).isEmpty();
         }
@@ -177,10 +177,10 @@ class ExtractTransactionsServiceTest {
                     null, ACCOUNT_ID.toString(),
                     null, "Salary", "2026-03-25", 0.98, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw1, raw2));
 
-            List<TransactionDraft> result = service.extract(USER_ID, "some multi-transaction text");
+            List<TransactionDraft> result = service.extract(USER_ID, "some multi-transaction text", null);
 
             assertThat(result).hasSize(2);
             assertThat(result.get(0).type()).isEqualTo(TransactionType.EXPENSE);
@@ -202,10 +202,10 @@ class ExtractTransactionsServiceTest {
                     "GIBBERISH", new BigDecimal("10.00"), "PEN",
                     null, null, null, null, "2026-03-28", 0.5, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            List<TransactionDraft> result = service.extract(USER_ID, "text");
+            List<TransactionDraft> result = service.extract(USER_ID, "text", null);
 
             assertThat(result.get(0).type()).isEqualTo(TransactionType.EXPENSE);
         }
@@ -220,10 +220,10 @@ class ExtractTransactionsServiceTest {
                     null, new BigDecimal("10.00"), "PEN",
                     null, null, null, null, "2026-03-28", 0.5, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            assertThat(service.extract(USER_ID, "text").get(0).type())
+            assertThat(service.extract(USER_ID, "text", null).get(0).type())
                     .isEqualTo(TransactionType.EXPENSE);
         }
     }
@@ -242,10 +242,10 @@ class ExtractTransactionsServiceTest {
                     "EXPENSE", new BigDecimal("5.00"), "PEN",
                     null, null, null, null, null, 0.4, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            TransactionDraft draft = service.extract(USER_ID, "text").get(0);
+            TransactionDraft draft = service.extract(USER_ID, "text", null).get(0);
 
             assertThat(draft.transactionDate()).isEqualTo(LocalDate.now());
         }
@@ -260,10 +260,10 @@ class ExtractTransactionsServiceTest {
                     "EXPENSE", new BigDecimal("5.00"), "PEN",
                     null, null, null, null, "not-a-date", 0.4, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            assertThat(service.extract(USER_ID, "text").get(0).transactionDate())
+            assertThat(service.extract(USER_ID, "text", null).get(0).transactionDate())
                     .isEqualTo(LocalDate.now());
         }
     }
@@ -282,10 +282,10 @@ class ExtractTransactionsServiceTest {
                     "EXPENSE", new BigDecimal("50.00"), "USD",
                     null, null, "Amazon", null, "2026-03-28", 0.85, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            TransactionDraft draft = service.extract(USER_ID, "text").get(0);
+            TransactionDraft draft = service.extract(USER_ID, "text", null).get(0);
 
             assertThat(draft.categoryId()).isNull();
             assertThat(draft.accountId()).isNull();
@@ -301,10 +301,10 @@ class ExtractTransactionsServiceTest {
                     "EXPENSE", new BigDecimal("10.00"), "PEN",
                     "not-a-uuid", "also-not-a-uuid", null, null, "2026-03-28", 0.3, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            TransactionDraft draft = service.extract(USER_ID, "text").get(0);
+            TransactionDraft draft = service.extract(USER_ID, "text", null).get(0);
 
             assertThat(draft.categoryId()).isNull();
             assertThat(draft.accountId()).isNull();
@@ -321,10 +321,10 @@ class ExtractTransactionsServiceTest {
                     "EXPENSE", new BigDecimal("8.00"), "PEN",
                     CATEGORY_ID.toString(), null, "Uber", null, "2026-03-28", 0.9, List.of());
 
-            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList()))
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
                     .thenReturn(List.of(raw));
 
-            TransactionDraft draft = service.extract(USER_ID, "text").get(0);
+            TransactionDraft draft = service.extract(USER_ID, "text", null).get(0);
 
             assertThat(draft.categoryId()).isEqualTo(CATEGORY_ID);
             assertThat(draft.categoryName()).isEqualTo("Transport");

@@ -56,7 +56,8 @@ public class VoiceExtractionController {
             @Valid @RequestBody VoiceExtractRequest request,
             @AuthenticationPrincipal UserPrincipal principal) {
 
-        List<TransactionDraft> drafts = extractUseCase.extract(principal.getId(), request.transcript());
+        List<TransactionDraft> drafts = extractUseCase.extract(
+                principal.getId(), request.transcript(), request.userTimezone());
 
         List<TransactionDraftDTO> dtos = drafts.stream()
                 .map(this::toDTO)

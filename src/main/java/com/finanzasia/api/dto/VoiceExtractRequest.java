@@ -11,6 +11,14 @@ public record VoiceExtractRequest(
 
         @NotBlank(message = "transcript must not be blank")
         @Size(max = 2000, message = "transcript must not exceed 2000 characters")
-        String transcript
+        String transcript,
+
+        /**
+         * UTC offset sent by the client (e.g. "-05:00", "+00:00").
+         * Used to compute the user's local "today" when the AI resolves relative
+         * date expressions such as "hoy" or "ayer". Defaults to UTC if absent.
+         */
+        @Size(max = 6, message = "userTimezone must be a UTC offset like +05:30")
+        String userTimezone
 
 ) {}

@@ -17,16 +17,20 @@ public interface AIExtractionPort {
      * The caller must pass the user's full category and account context so the
      * AI can resolve them by ID, avoiding an extra resolution step in the domain.
      *
-     * @param transcript the plain-text voice content to analyse
-     * @param categories all categories available to the user
-     * @param accounts   all accounts available to the user
+     * @param transcript   the plain-text voice content to analyse
+     * @param categories   all categories available to the user
+     * @param accounts     all accounts available to the user
+     * @param tags         all tags available to the user
+     * @param userTimezone UTC offset string (e.g. "-05:00") used to compute the user's local today;
+     *                     null or blank defaults to UTC
      * @return list of raw AI results, one per detected transaction
      */
     List<AITransactionRaw> extractFromText(
             String transcript,
             List<CategoryContext> categories,
             List<AccountContext> accounts,
-            List<TagContext> tags);
+            List<TagContext> tags,
+            String userTimezone);
 
     record CategoryContext(UUID id, String name) {}
 
