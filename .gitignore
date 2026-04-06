@@ -37,7 +37,7 @@ secrets/
 *.iws
 *.iml
 *.ipr
-out/
+/out/
 
 # ========================
 # IDE — VS Code
