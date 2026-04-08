@@ -305,9 +305,14 @@ public class TransactionService implements TransactionUseCase {
                 accountService.adjustBalance(accountId, creditAmount);
             }
             case TRANSFER -> {
-                // Transfers are always within the same user; no currency conversion applied
                 accountService.adjustBalance(fromAccountId, amount.negate());
-                accountService.adjustBalance(toAccountId, amount);
+                // For cross-currency transfers, credit the user-supplied received amount
+                // (stored in amountLocal) to the destination account. Fall back to the
+                // sent amount when currencies match (amountLocal will be null).
+                BigDecimal toAmount = (transaction.getAmountLocal() != null)
+                        ? transaction.getAmountLocal()
+                        : amount;
+                accountService.adjustBalance(toAccountId, toAmount);
             }
         }
     }
@@ -339,7 +344,11 @@ public class TransactionService implements TransactionUseCase {
             }
             case TRANSFER -> {
                 accountService.adjustBalance(fromAccountId, amount);
-                accountService.adjustBalance(toAccountId, amount.negate());
+                // Mirror the exact amount that was credited during applyBalanceEffect.
+                // For cross-currency transfers storedAmountLocal is the received amount;
+                // for same-currency transfers it is null and we use the original amount.
+                BigDecimal toAmount = (storedAmountLocal != null) ? storedAmountLocal : amount;
+                accountService.adjustBalance(toAccountId, toAmount.negate());
             }
         }
     }
