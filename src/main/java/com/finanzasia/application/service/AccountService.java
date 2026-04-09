@@ -51,15 +51,20 @@ public class AccountService implements AccountUseCase {
 
     /**
      * Computes the net worth contribution for a given currency.
-     * Non-credit accounts add their balance; credit card accounts subtract
-     * their outstanding balance (stored as a positive number).
+     * Non-credit accounts add their balance directly.
+     * Credit card accounts: currentBalance is the remaining available credit,
+     * so debt = creditLimit - currentBalance. Net worth contribution = -(debt)
+     * = currentBalance - creditLimit (negative when the card has been used).
      */
     private BigDecimal computeNetWorthForCurrency(List<Account> accounts, String currency) {
         return accounts.stream()
                 .filter(a -> currency.equals(a.getCurrency()) && a.isActive())
-                .map(a -> a.getType() == AccountType.CREDIT_CARD
-                        ? a.getCurrentBalance().abs().negate()
-                        : a.getCurrentBalance())
+                .map(a -> {
+                    if (a.getType() == AccountType.CREDIT_CARD && a.getCreditLimit() != null) {
+                        return a.getCurrentBalance().subtract(a.getCreditLimit());
+                    }
+                    return a.getCurrentBalance();
+                })
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
     }
