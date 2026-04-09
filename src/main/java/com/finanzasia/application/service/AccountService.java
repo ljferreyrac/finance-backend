@@ -41,15 +41,13 @@ public class AccountService implements AccountUseCase {
         List<Account> accounts = accountRepository.findAllByUser(userId);
 
         BigDecimal totalPEN = accounts.stream()
-                .filter(a -> "PEN".equals(a.getCurrency()) && a.isActive()
-                        && a.getType() != AccountType.CREDIT_CARD)
+                .filter(a -> "PEN".equals(a.getCurrency()) && a.isActive())
                 .map(Account::getCurrentBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
 
         BigDecimal totalUSD = accounts.stream()
-                .filter(a -> "USD".equals(a.getCurrency()) && a.isActive()
-                        && a.getType() != AccountType.CREDIT_CARD)
+                .filter(a -> "USD".equals(a.getCurrency()) && a.isActive())
                 .map(Account::getCurrentBalance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add)
                 .setScale(2, RoundingMode.HALF_UP);
