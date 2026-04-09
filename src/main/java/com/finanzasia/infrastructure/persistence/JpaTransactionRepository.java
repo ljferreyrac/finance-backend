@@ -97,6 +97,8 @@ public class JpaTransactionRepository implements TransactionRepository {
             entity.setTransactionDate(transaction.getTransactionDate());
             entity.setUpdatedAt(transaction.getUpdatedAt());
             entity.setDeletedAt(transaction.getDeletedAt());
+            entity.setAmountLocal(transaction.getAmountLocal());
+            entity.setExchangeRateApplied(transaction.getExchangeRateApplied());
         } else {
             entity = TransactionEntity.fromDomain(transaction);
         }
