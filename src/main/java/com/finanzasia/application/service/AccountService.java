@@ -40,19 +40,28 @@ public class AccountService implements AccountUseCase {
     public NetWorth getNetWorth(UUID userId) {
         List<Account> accounts = accountRepository.findAllByUser(userId);
 
-        BigDecimal totalPEN = accounts.stream()
-                .filter(a -> "PEN".equals(a.getCurrency()) && a.isActive())
-                .map(Account::getCurrentBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
-
-        BigDecimal totalUSD = accounts.stream()
-                .filter(a -> "USD".equals(a.getCurrency()) && a.isActive())
-                .map(Account::getCurrentBalance)
-                .reduce(BigDecimal.ZERO, BigDecimal::add)
-                .setScale(2, RoundingMode.HALF_UP);
+        // Assets: bank/cash/wallet balances (positive contribution).
+        // Liabilities: credit card outstanding balances subtracted using abs()
+        // because the initial balance is always stored as a positive number.
+        BigDecimal totalPEN = computeNetWorthForCurrency(accounts, "PEN");
+        BigDecimal totalUSD = computeNetWorthForCurrency(accounts, "USD");
 
         return new NetWorth(totalPEN, totalUSD, accounts);
+    }
+
+    /**
+     * Computes the net worth contribution for a given currency.
+     * Non-credit accounts add their balance; credit card accounts subtract
+     * their outstanding balance (stored as a positive number).
+     */
+    private BigDecimal computeNetWorthForCurrency(List<Account> accounts, String currency) {
+        return accounts.stream()
+                .filter(a -> currency.equals(a.getCurrency()) && a.isActive())
+                .map(a -> a.getType() == AccountType.CREDIT_CARD
+                        ? a.getCurrentBalance().abs().negate()
+                        : a.getCurrentBalance())
+                .reduce(BigDecimal.ZERO, BigDecimal::add)
+                .setScale(2, RoundingMode.HALF_UP);
     }
 
     @Override
