@@ -16,7 +16,7 @@ public interface AccountUseCase {
 
     List<Account> listAccounts(UUID userId);
 
-    NetWorth getNetWorth(UUID userId);
+    NetWorth getNetWorth(UUID userId, boolean includeDebt);
 
     Account createAccount(
             UUID userId,
