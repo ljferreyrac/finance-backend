@@ -252,7 +252,7 @@ class AccountServiceTest {
             Account usd1 = buildAccount(UUID.randomUUID(), "USD", BigDecimal.valueOf(200), false);
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(pen1, pen2, usd1));
 
-            NetWorth result = service.getNetWorth(USER_ID);
+            NetWorth result = service.getNetWorth(USER_ID, true);
 
             assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.valueOf(1500));
             assertThat(result.totalUSD()).isEqualByComparingTo(BigDecimal.valueOf(200));
@@ -264,7 +264,7 @@ class AccountServiceTest {
         void getNetWorth_noAccounts_returnsZero() {
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
 
-            NetWorth result = service.getNetWorth(USER_ID);
+            NetWorth result = service.getNetWorth(USER_ID, true);
 
             assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.ZERO);
             assertThat(result.totalUSD()).isEqualByComparingTo(BigDecimal.ZERO);
