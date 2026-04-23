@@ -62,7 +62,8 @@ public class GeminiExtractionService implements AIExtractionPort {
         String responseBody;
         try {
             responseBody = restClient.post()
-                    .uri(apiUrl + "?key=" + apiKey)
+                    .uri(apiUrl)
+                    .header("x-goog-api-key", apiKey)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(requestBody)
                     .retrieve()
