@@ -24,7 +24,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -62,7 +61,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("returns accounts owned by user")
-        void listAccounts_returnsUserAccounts() {
+        void listAccountsReturnsUserAccounts() {
             Account a = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(a));
 
@@ -83,7 +82,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("clears existing default when isDefault=true")
-        void createAccount_isDefault_clearsExisting() {
+        void createAccountIsDefaultClearsExisting() {
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             service.createAccount(USER_ID, "Main", AccountType.BANK,
@@ -94,7 +93,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("does not clear default when isDefault=false")
-        void createAccount_notDefault_doesNotClearExisting() {
+        void createAccountNotDefaultDoesNotClearExisting() {
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
             service.createAccount(USER_ID, "Secondary", AccountType.BANK,
@@ -105,7 +104,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("sets currentBalance to initialBalance")
-        void createAccount_withInitialBalance() {
+        void createAccountWithInitialBalance() {
             ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
             when(accountRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -118,7 +117,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("defaults balance to zero when initialBalance is null")
-        void createAccount_nullInitialBalance_defaultsToZero() {
+        void createAccountNullInitialBalanceDefaultsToZero() {
             ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
             when(accountRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
 
@@ -140,7 +139,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("throws AccountNotFoundException when not owned by user")
-        void updateAccount_notOwner_throws404() {
+        void updateAccountNotOwnerThrows404() {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.updateAccount(USER_ID, ACCOUNT_ID,
@@ -150,7 +149,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("updates only provided fields")
-        void updateAccount_partialUpdate() {
+        void updateAccountPartialUpdate() {
             Account existing = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(200), false);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -173,7 +172,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("throws AccountInUseException when account has transactions")
-        void deleteAccount_withTransactions_throws409() {
+        void deleteAccountWithTransactionsThrows409() {
             Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.ZERO, false);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(accountRepository.countTransactionsByAccountId(ACCOUNT_ID)).thenReturn(3L);
@@ -185,7 +184,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("deletes account when it has no transactions")
-        void deleteAccount_noTransactions_success() {
+        void deleteAccountNoTransactionsSuccess() {
             Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.ZERO, false);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(accountRepository.countTransactionsByAccountId(ACCOUNT_ID)).thenReturn(0L);
@@ -197,7 +196,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("throws AccountNotFoundException when account does not belong to user")
-        void deleteAccount_notOwner_throws404() {
+        void deleteAccountNotOwnerThrows404() {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.deleteAccount(USER_ID, ACCOUNT_ID))
@@ -215,7 +214,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("clears old default and marks new account as default")
-        void setDefaultAccount_clearsOldDefault() {
+        void setDefaultAccountClearsOldDefault() {
             Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.ZERO, false);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -228,7 +227,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("throws AccountNotFoundException when account not found")
-        void setDefaultAccount_notFound_throws() {
+        void setDefaultAccountNotFoundThrows() {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.setDefaultAccount(USER_ID, ACCOUNT_ID))
@@ -246,7 +245,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("sums balances by currency across active accounts")
-        void getNetWorth_sumsByCurrency() {
+        void getNetWorthSumsByCurrency() {
             Account pen1 = buildAccount(UUID.randomUUID(), "PEN", BigDecimal.valueOf(1000), false);
             Account pen2 = buildAccount(UUID.randomUUID(), "PEN", BigDecimal.valueOf(500), false);
             Account usd1 = buildAccount(UUID.randomUUID(), "USD", BigDecimal.valueOf(200), false);
@@ -261,7 +260,7 @@ class AccountServiceTest {
 
         @Test
         @DisplayName("returns zero totals when user has no accounts")
-        void getNetWorth_noAccounts_returnsZero() {
+        void getNetWorthNoAccountsReturnsZero() {
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
 
             NetWorth result = service.getNetWorth(USER_ID, true);

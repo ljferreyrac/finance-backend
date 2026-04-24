@@ -109,7 +109,8 @@ public record YearlyReportDTO(
 
         Highlights highlights = buildHighlights(report.highlights());
 
-        return new YearlyReportDTO(report.year(), summary, incomeSummary, byMonth, byCategory, topMerchants, highlights);
+        return new YearlyReportDTO(
+                report.year(), summary, incomeSummary, byMonth, byCategory, topMerchants, highlights);
     }
 
     private static Highlights buildHighlights(YearlyReport.Highlights src) {

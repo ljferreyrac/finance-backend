@@ -46,7 +46,7 @@ class TagServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void listTags_returnsTagsForUser() {
+    void listTagsReturnsTagsForUser() {
         Tag tag = new Tag(tagId, userId, "deducible", "#FF5733");
         when(tagRepository.findByUserId(userId)).thenReturn(List.of(tag));
 
@@ -63,7 +63,7 @@ class TagServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void createTag_success() {
+    void createTagSuccess() {
         String name = "ocio";
         String color = "#336699";
 
@@ -84,7 +84,7 @@ class TagServiceTest {
     }
 
     @Test
-    void createTag_throwsDuplicateTagException_whenNameExists() {
+    void createTagThrowsDuplicateTagExceptionWhenNameExists() {
         String name = "ocio";
         when(tagRepository.existsByUserIdAndName(userId, name)).thenReturn(true);
 
@@ -100,7 +100,7 @@ class TagServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void updateTag_success() {
+    void updateTagSuccess() {
         Tag existing = new Tag(tagId, userId, "viaje", "#AABBCC");
         String newName = "viaje_trabajo";
         String newColor = "#112233";
@@ -123,7 +123,7 @@ class TagServiceTest {
     }
 
     @Test
-    void updateTag_throwsTagNotFoundException_whenNotOwner() {
+    void updateTagThrowsTagNotFoundExceptionWhenNotOwner() {
         when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> tagService.updateTag(userId, tagId, "new-name", null))
@@ -137,7 +137,7 @@ class TagServiceTest {
     // ------------------------------------------------------------------
 
     @Test
-    void deleteTag_success() {
+    void deleteTagSuccess() {
         when(tagRepository.deleteByIdAndUserId(tagId, userId)).thenReturn(true);
 
         tagService.deleteTag(userId, tagId);
@@ -146,7 +146,7 @@ class TagServiceTest {
     }
 
     @Test
-    void deleteTag_throwsTagNotFoundException_whenNotOwner() {
+    void deleteTagThrowsTagNotFoundExceptionWhenNotOwner() {
         when(tagRepository.deleteByIdAndUserId(tagId, userId)).thenReturn(false);
 
         assertThatThrownBy(() -> tagService.deleteTag(userId, tagId))

@@ -178,15 +178,15 @@ public class TransactionService implements TransactionUseCase {
                 existing.getAmountLocal(),
                 existing.getExchangeRateApplied());
 
-        if (amount != null)          existing.setAmount(amount);
-        if (currency != null)        existing.setCurrency(currency);
+        if (amount != null) { existing.setAmount(amount); }
+        if (currency != null) { existing.setCurrency(currency); }
         existing.setAccountId(mergedAccountId);
         existing.setFromAccountId(mergedFromAccountId);
         existing.setToAccountId(mergedToAccountId);
         existing.setCategoryId(mergedCategoryId);
         existing.setMerchant(merchant);
         existing.setDescription(description);
-        if (transactionDate != null) existing.setTransactionDate(transactionDate);
+        if (transactionDate != null) { existing.setTransactionDate(transactionDate); }
         existing.setUpdatedAt(Instant.now());
 
         // null tagIds means "do not change tags"; empty list means "remove all tags"

@@ -23,7 +23,6 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -59,7 +58,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("delegates to repository and returns the result")
-        void listCategories_returnsUserCategories() {
+        void listCategoriesReturnsUserCategories() {
             List<Category> expected = List.of(
                     buildCategory(UUID.randomUUID(), USER_ID, "Comida", true),
                     buildCategory(UUID.randomUUID(), USER_ID, "Transporte", false));
@@ -80,7 +79,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("saves and returns the new category when name is unique")
-        void createCategory_success() {
+        void createCategorySuccess() {
             when(categoryRepository.existsByUserAndName(USER_ID, "Comida")).thenReturn(false);
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -96,7 +95,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws DuplicateCategoryNameException when a category with the same name exists")
-        void createCategory_duplicateName_throws409() {
+        void createCategoryDuplicateNameThrows409() {
             when(categoryRepository.existsByUserAndName(USER_ID, "Comida")).thenReturn(true);
 
             assertThatThrownBy(() -> service.createCategory(USER_ID, "Comida", null, null, false))
@@ -107,7 +106,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("clears existing default before saving when isDefault is true")
-        void createCategory_isDefault_clearsExistingDefault() {
+        void createCategoryIsDefaultClearsExistingDefault() {
             when(categoryRepository.existsByUserAndName(USER_ID, "Comida")).thenReturn(false);
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -120,7 +119,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("does not clear defaults when isDefault is false")
-        void createCategory_notDefault_doesNotClearDefaults() {
+        void createCategoryNotDefaultDoesNotClearDefaults() {
             when(categoryRepository.existsByUserAndName(USER_ID, "Transporte")).thenReturn(false);
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -139,7 +138,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("updates allowed fields and saves")
-        void updateCategory_success() {
+        void updateCategorySuccess() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -155,7 +154,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws CategoryNotFoundException when category does not belong to user")
-        void updateCategory_notFound_throws404() {
+        void updateCategoryNotFoundThrows404() {
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.empty());
 
@@ -168,7 +167,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws DuplicateCategoryNameException when new name conflicts with another category")
-        void updateCategory_duplicateName_throws409() {
+        void updateCategoryDuplicateNameThrows409() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -190,7 +189,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("deletes category when it has no expenses")
-        void deleteCategory_noExpenses_success() {
+        void deleteCategoryNoExpensesSuccess() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -205,7 +204,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws CategoryInUseException when category has expenses and no reassignTo")
-        void deleteCategory_withExpenses_noReassign_throws409() {
+        void deleteCategoryWithExpensesNoReassignThrows409() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -221,7 +220,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("reassigns expenses and deletes when reassignTo is provided")
-        void deleteCategory_withExpenses_withReassign_success() {
+        void deleteCategoryWithExpensesWithReassignSuccess() {
             Category target = buildCategory(OTHER_CATEGORY_ID, USER_ID, "Otros", false);
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
@@ -239,7 +238,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws LastCategoryException when it is the only category")
-        void deleteCategory_lastCategory_throws409() {
+        void deleteCategoryLastCategoryThrows409() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", true);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -260,7 +259,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("clears old default, marks category as default, and saves")
-        void setDefaultCategory_success_clearsOldDefault() {
+        void setDefaultCategorySuccessClearsOldDefault() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.of(existing));
@@ -278,7 +277,7 @@ class CategoryServiceTest {
 
         @Test
         @DisplayName("throws CategoryNotFoundException when category does not exist for user")
-        void setDefaultCategory_notFound_throws404() {
+        void setDefaultCategoryNotFoundThrows404() {
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
                     .thenReturn(Optional.empty());
 

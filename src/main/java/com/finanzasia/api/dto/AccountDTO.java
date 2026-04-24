@@ -22,7 +22,10 @@ public record AccountDTO(
         @Schema(description = "Whether this is the user's default account") boolean isDefault,
         @Schema(description = "Whether the account is active") boolean isActive,
         @Schema(description = "Number of non-deleted transactions linked to this account") long transactionCount,
-        @Schema(description = "Parent bank account UUID whose balance is adjusted when this account is used") UUID linkedAccountId,
-        @Schema(description = "Remaining credit available (CREDIT_CARD only): creditLimit minus absolute outstanding balance. Null for non-credit accounts.",
-                example = "3500.00") BigDecimal availableCredit
+        @Schema(description = "Parent bank account UUID whose balance is adjusted when this account is used")
+        UUID linkedAccountId,
+        @Schema(description = "Remaining credit available (CREDIT_CARD only): creditLimit minus absolute"
+                + " outstanding balance. Null for non-credit accounts.",
+                example = "3500.00")
+        BigDecimal availableCredit
 ) {}

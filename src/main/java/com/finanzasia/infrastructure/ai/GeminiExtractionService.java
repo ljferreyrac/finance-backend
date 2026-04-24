@@ -30,7 +30,7 @@ import java.util.Map;
 @Component
 public class GeminiExtractionService implements AIExtractionPort {
 
-    private static final Logger log = LoggerFactory.getLogger(GeminiExtractionService.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GeminiExtractionService.class);
 
     private final RestClient restClient;
     private final ObjectMapper objectMapper;
@@ -69,7 +69,7 @@ public class GeminiExtractionService implements AIExtractionPort {
                     .retrieve()
                     .body(String.class);
         } catch (RestClientException ex) {
-            log.error("Gemini API call failed: {}", ex.getMessage());
+            LOG.error("Gemini API call failed: {}", ex.getMessage());
             throw new AIExtractionException("AI service unavailable. Please try again later.", ex);
         }
 
@@ -92,7 +92,7 @@ public class GeminiExtractionService implements AIExtractionPort {
             try {
                 offset = ZoneOffset.of(userTimezone);
             } catch (Exception ex) {
-                log.warn("Invalid userTimezone '{}', falling back to UTC", userTimezone);
+                LOG.warn("Invalid userTimezone '{}', falling back to UTC", userTimezone);
             }
         }
         String today = LocalDate.now(offset).toString();
@@ -123,7 +123,8 @@ public class GeminiExtractionService implements AIExtractionPort {
                 + "- If type not clear, default to \"EXPENSE\"\n"
                 + "- Map category to the closest available category ID. If unsure, use null.\n"
                 + "- Map account to the closest available account ID. If unsure, use null.\n"
-                + "- If the user mentions a tag name or label, match it to the closest available tag ID and include it in tagIds. If none match, return an empty array.\n"
+                + "- If the user mentions a tag name or label, match it to the closest available tag ID"
+                + " and include it in tagIds. If none match, return an empty array.\n"
                 + "- confidence: 0.0 to 1.0 based on how certain you are of each field\n\n"
                 + "Respond ONLY with a valid JSON array, no markdown, no explanation:\n"
                 + "[\n"
@@ -180,7 +181,7 @@ public class GeminiExtractionService implements AIExtractionPort {
                     .path("text");
 
             if (textNode.isMissingNode()) {
-                log.error("Unexpected Gemini response structure: {}", responseBody);
+                LOG.error("Unexpected Gemini response structure: {}", responseBody);
                 throw new AIExtractionException("AI returned an unrecognised response format.");
             }
 
@@ -188,7 +189,7 @@ public class GeminiExtractionService implements AIExtractionPort {
             return objectMapper.readValue(jsonArray, new TypeReference<List<AITransactionRaw>>() {});
 
         } catch (JsonProcessingException ex) {
-            log.error("Failed to parse Gemini response: {}", ex.getMessage());
+            LOG.error("Failed to parse Gemini response: {}", ex.getMessage());
             throw new AIExtractionException("AI returned a response that could not be parsed.", ex);
         }
     }

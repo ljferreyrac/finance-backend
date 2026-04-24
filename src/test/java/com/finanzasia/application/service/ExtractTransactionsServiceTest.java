@@ -57,7 +57,8 @@ class ExtractTransactionsServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ExtractTransactionsService(categoryRepository, accountRepository, tagRepository, aiExtractionPort);
+        service = new ExtractTransactionsService(
+                categoryRepository, accountRepository, tagRepository, aiExtractionPort);
     }
 
     // ------------------------------------------------------------------
@@ -139,7 +140,8 @@ class ExtractTransactionsServiceTest {
             @SuppressWarnings("unchecked")
             ArgumentCaptor<List<AccountContext>> accCaptor = ArgumentCaptor.forClass(List.class);
 
-            verify(aiExtractionPort).extractFromText(eq("some text"), catCaptor.capture(), accCaptor.capture(), anyList(), any());
+            verify(aiExtractionPort).extractFromText(
+                    eq("some text"), catCaptor.capture(), accCaptor.capture(), anyList(), any());
 
             assertThat(catCaptor.getValue()).hasSize(1);
             assertThat(catCaptor.getValue().get(0).id()).isEqualTo(CATEGORY_ID);

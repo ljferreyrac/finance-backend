@@ -39,7 +39,7 @@ import java.util.stream.Collectors;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final Logger LOG = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     @ExceptionHandler(UserAlreadyExistsException.class)
     public ProblemDetail handleUserAlreadyExists(UserAlreadyExistsException ex) {
@@ -191,7 +191,7 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(AIExtractionException.class)
     public ProblemDetail handleAIExtraction(AIExtractionException ex) {
-        log.error("AI extraction failed: {}", ex.getMessage(), ex);
+        LOG.error("AI extraction failed: {}", ex.getMessage(), ex);
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         pd.setTitle("AI Extraction Failed");
         pd.setDetail("The AI service could not process your request. Please try again.");
@@ -206,7 +206,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
-        log.error("Unhandled exception: {}", ex.getMessage(), ex);
+        LOG.error("Unhandled exception: {}", ex.getMessage(), ex);
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.INTERNAL_SERVER_ERROR);
         pd.setTitle("Internal Server Error");
         pd.setDetail("An unexpected error occurred. Please try again later.");

@@ -110,7 +110,8 @@ public class AccountController {
         return toDTO(account);
     }
 
-    @Operation(summary = "Update account", description = "Updates an existing account. Type and currency are immutable.")
+    @Operation(summary = "Update account",
+               description = "Updates an existing account. Type and currency are immutable.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Account updated",
                          content = @Content(schema = @Schema(implementation = AccountDTO.class))),

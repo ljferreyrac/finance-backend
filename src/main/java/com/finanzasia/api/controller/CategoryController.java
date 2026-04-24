@@ -71,7 +71,8 @@ public class CategoryController {
                          content = @Content(schema = @Schema(implementation = CategoryDTO.class))),
             @ApiResponse(responseCode = "400", description = "Validation error", content = @Content),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content),
-            @ApiResponse(responseCode = "409", description = "A category with this name already exists", content = @Content)
+            @ApiResponse(responseCode = "409",
+                         description = "A category with this name already exists", content = @Content)
     })
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -99,7 +100,8 @@ public class CategoryController {
             @ApiResponse(responseCode = "400", description = "Validation error", content = @Content),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content),
             @ApiResponse(responseCode = "404", description = "Category not found", content = @Content),
-            @ApiResponse(responseCode = "409", description = "A category with this name already exists", content = @Content)
+            @ApiResponse(responseCode = "409",
+                         description = "A category with this name already exists", content = @Content)
     })
     @PutMapping("/{id}")
     public CategoryDTO update(

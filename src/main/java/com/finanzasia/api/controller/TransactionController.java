@@ -148,7 +148,8 @@ public class TransactionController {
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "Transaction created",
                          content = @Content(schema = @Schema(implementation = TransactionDTO.class))),
-            @ApiResponse(responseCode = "400", description = "Validation error or invalid transaction", content = @Content),
+            @ApiResponse(responseCode = "400",
+                         description = "Validation error or invalid transaction", content = @Content),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content),
             @ApiResponse(responseCode = "404", description = "Account or category not found", content = @Content)
     })
@@ -285,12 +286,12 @@ public class TransactionController {
     }
 
     private AccountSummaryDTO toAccountSummary(Account account) {
-        if (account == null) return null;
+        if (account == null) { return null; }
         return new AccountSummaryDTO(account.getId(), account.getName(), account.getColor(), account.getType());
     }
 
     private CategorySummaryDTO toCategorySummary(Category category) {
-        if (category == null) return null;
+        if (category == null) { return null; }
         return new CategorySummaryDTO(category.getId(), category.getName(), category.getColor(), category.getIcon());
     }
 

@@ -8,7 +8,8 @@ import java.util.List;
 public record PagedTransactionsDTO(
 
         @Schema(description = "Transactions in this page") List<TransactionDTO> items,
-        @Schema(description = "Opaque cursor to pass as the 'cursor' query parameter for the next page") String nextCursor,
+        @Schema(description = "Opaque cursor to pass as the 'cursor' query parameter for the next page")
+        String nextCursor,
         @Schema(description = "Whether more results exist after this page") boolean hasMore,
         @Schema(description = "Total number of matching transactions (ignoring pagination)") long totalCount
 ) {}

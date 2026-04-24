@@ -57,7 +57,7 @@ class ExchangeRateServiceTest {
 
         @Test
         @DisplayName("returns existing rate when one is already recorded for today")
-        void getOrCreateDefault_existingRate_returnsIt() {
+        void getOrCreateDefaultExistingRateReturnsIt() {
             ExchangeRate existing = buildRate(new BigDecimal("3.70"), new BigDecimal("3.75"));
             when(exchangeRateRepository.findByDate(eq(FROM), eq(TO), any(LocalDate.class)))
                     .thenReturn(Optional.of(existing));
@@ -70,7 +70,7 @@ class ExchangeRateServiceTest {
 
         @Test
         @DisplayName("creates and persists a default rate when none exists for today")
-        void getOrCreateDefault_noRate_createsDefault() {
+        void getOrCreateDefaultNoRateCreatesDefault() {
             when(exchangeRateRepository.findByDate(eq(FROM), eq(TO), any(LocalDate.class)))
                     .thenReturn(Optional.empty());
             when(exchangeRateRepository.upsert(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -100,7 +100,7 @@ class ExchangeRateServiceTest {
 
         @Test
         @DisplayName("updates buy and sell rates on an existing record")
-        void upsertToday_existingRecord_updatesRates() {
+        void upsertTodayExistingRecordUpdatesRates() {
             ExchangeRate existing = buildRate(new BigDecimal("3.69"), new BigDecimal("3.74"));
             when(exchangeRateRepository.findByDate(eq(FROM), eq(TO), any(LocalDate.class)))
                     .thenReturn(Optional.of(existing));
@@ -122,7 +122,7 @@ class ExchangeRateServiceTest {
 
         @Test
         @DisplayName("creates a new record when none exists for today")
-        void upsertToday_noExistingRecord_createsNew() {
+        void upsertTodayNoExistingRecordCreatesNew() {
             when(exchangeRateRepository.findByDate(eq(FROM), eq(TO), any(LocalDate.class)))
                     .thenReturn(Optional.empty());
             when(exchangeRateRepository.upsert(any())).thenAnswer(inv -> inv.getArgument(0));

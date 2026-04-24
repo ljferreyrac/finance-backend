@@ -19,7 +19,11 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -51,9 +55,11 @@ public class VoiceExtractionController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Drafts extracted successfully (list may be empty if nothing was detected)",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionDraftDTO.class)))
+                    content = @Content(array = @ArraySchema(
+                            schema = @Schema(implementation = TransactionDraftDTO.class)))
             ),
-            @ApiResponse(responseCode = "400", description = "Validation error (transcript blank or too long)", content = @Content),
+            @ApiResponse(responseCode = "400",
+                         description = "Validation error (transcript blank or too long)", content = @Content),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content),
             @ApiResponse(responseCode = "502", description = "AI service unavailable", content = @Content)
     })
@@ -82,7 +88,8 @@ public class VoiceExtractionController {
             @ApiResponse(
                     responseCode = "200",
                     description = "Drafts extracted successfully",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = TransactionDraftDTO.class)))
+                    content = @Content(array = @ArraySchema(
+                            schema = @Schema(implementation = TransactionDraftDTO.class)))
             ),
             @ApiResponse(responseCode = "400", description = "Missing or empty audio file", content = @Content),
             @ApiResponse(responseCode = "401", description = "Missing or invalid JWT", content = @Content),

@@ -1,6 +1,5 @@
 package com.finanzasia.application.service;
 
-import com.finanzasia.domain.exceptions.AccountNotFoundException;
 import com.finanzasia.domain.exceptions.CategoryNotFoundException;
 import com.finanzasia.domain.exceptions.InvalidTransactionException;
 import com.finanzasia.domain.exceptions.TransactionNotFoundException;
@@ -10,7 +9,6 @@ import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.Transaction;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.model.ExchangeRate;
-import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.port.in.GetTodayExchangeRateUseCase;
 import com.finanzasia.domain.port.out.AccountRepository;
 import com.finanzasia.domain.port.out.CategoryRepository;
@@ -114,7 +112,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("EXPENSE debits the account")
-        void createExpense_debitsAccount() {
+        void createExpenseDebitsAccount() {
             Account penAccount = buildAccount(ACCOUNT_ID);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(penAccount));
@@ -132,7 +130,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("INCOME credits the account")
-        void createIncome_creditsAccount() {
+        void createIncomeCreditsAccount() {
             Account penAccount = buildAccount(ACCOUNT_ID);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(penAccount));
@@ -148,7 +146,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("TRANSFER debits fromAccount and credits toAccount")
-        void createTransfer_debitsFromCreditsTo() {
+        void createTransferDebitsFromCreditsTo() {
             when(accountRepository.findByIdAndUser(FROM_ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(buildAccount(FROM_ACCOUNT_ID)));
             when(accountRepository.findByIdAndUser(TO_ACCOUNT_ID, USER_ID))
@@ -164,7 +162,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("TRANSFER to same account throws InvalidTransactionException")
-        void createTransfer_sameAccount_throwsInvalidTransaction() {
+        void createTransferSameAccountThrowsInvalidTransaction() {
             assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER, AMOUNT, "PEN",
                     null, ACCOUNT_ID, ACCOUNT_ID, null, null, null, TODAY, null, null))
                     .isInstanceOf(InvalidTransactionException.class)
@@ -173,7 +171,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("EXPENSE with unowned category throws CategoryNotFoundException")
-        void createExpense_categoryNotOwned_throws404() {
+        void createExpenseCategoryNotOwnedThrows404() {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
@@ -188,7 +186,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("EXPENSE without categoryId throws InvalidTransactionException")
-        void createExpense_missingCategory_throwsInvalid() {
+        void createExpenseMissingCategoryThrowsInvalid() {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
 
@@ -199,7 +197,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("USD EXPENSE on a PEN account applies sell rate and stores it on the transaction")
-        void createExpense_crossCurrency_appliesSellRate() {
+        void createExpenseCrossCurrencyAppliesSellRate() {
             Account penAccount = buildAccount(ACCOUNT_ID);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(penAccount));
@@ -221,7 +219,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("USD EXPENSE with user-supplied amountLocal uses it directly without fetching exchange rate")
-        void createExpense_userSuppliedAmountLocal_usesItDirectly() {
+        void createExpenseUserSuppliedAmountLocalUsesItDirectly() {
             Account penAccount = buildAccount(ACCOUNT_ID);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(penAccount));
@@ -243,7 +241,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("USD EXPENSE with user-supplied amountLocal stores derived exchangeRateApplied")
-        void createExpense_userSuppliedAmountLocal_storesComputedRate() {
+        void createExpenseUserSuppliedAmountLocalStoresComputedRate() {
             Account penAccount = buildAccount(ACCOUNT_ID);
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(penAccount));
@@ -276,7 +274,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("reverses old balance effect and applies new one")
-        void updateTransaction_reversesOldBalance_appliesNew() {
+        void updateTransactionReversesOldBalanceAppliesNew() {
             Transaction existing = buildTransaction(TX_ID, TransactionType.EXPENSE,
                     ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
             UUID newAccountId = UUID.randomUUID();
@@ -312,7 +310,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("soft-deletes and reverses the balance effect")
-        void deleteTransaction_reversesBalance() {
+        void deleteTransactionReversesBalance() {
             Transaction existing = buildTransaction(TX_ID, TransactionType.EXPENSE,
                     ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
             when(transactionRepository.findByIdAndUser(TX_ID, USER_ID)).thenReturn(Optional.of(existing));
@@ -326,7 +324,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("reverses TRANSFER balance on delete")
-        void deleteTransfer_reversesFromAndTo() {
+        void deleteTransferReversesFromAndTo() {
             Transaction existing = buildTransaction(TX_ID, TransactionType.TRANSFER,
                     null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null, AMOUNT);
             when(transactionRepository.findByIdAndUser(TX_ID, USER_ID)).thenReturn(Optional.of(existing));
@@ -340,7 +338,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("reversal of cross-currency EXPENSE uses stored amountLocal directly")
-        void deleteExpense_crossCurrency_usesStoredAmountLocal() {
+        void deleteExpenseCrossCurrencyUsesStoredAmountLocal() {
             BigDecimal storedLocal = new BigDecimal("376.50");
             BigDecimal storedRate  = new BigDecimal("3.7650");
             Transaction existing = buildUsdTransaction(TX_ID, TransactionType.EXPENSE,
@@ -355,7 +353,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("reversal falls back to storedRate multiplication when amountLocal is absent (legacy row)")
-        void deleteExpense_legacyRow_usesStoredRateFallback() {
+        void deleteExpenseLegacyRowUsesStoredRateFallback() {
             BigDecimal storedRate = new BigDecimal("3.74");
             // amountLocal is null -- simulates a row created before this column existed
             Transaction existing = buildUsdTransaction(TX_ID, TransactionType.EXPENSE,
@@ -379,7 +377,7 @@ class TransactionServiceTest {
 
         @Test
         @DisplayName("throws TransactionNotFoundException when not owned by user")
-        void getTransaction_notOwner_throws404() {
+        void getTransactionNotOwnerThrows404() {
             when(transactionRepository.findByIdAndUser(TX_ID, USER_ID)).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> service.getTransaction(USER_ID, TX_ID))

@@ -86,7 +86,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("builds period label in Spanish")
-        void builds_period_label() {
+        void buildsPeriodLabel() {
             stubMonthlyEmpty(2026, 3);
 
             MonthlyReport report = service.getMonthlyReport(
@@ -99,7 +99,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("returns zeroed summary when no expenses exist")
-        void returns_zeroed_summary_for_empty_period() {
+        void returnsZeroedSummaryForEmptyPeriod() {
             stubMonthlyEmpty(2026, 3);
 
             MonthlyReport report = service.getMonthlyReport(
@@ -112,7 +112,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("computes daily average as total divided by days in month")
-        void computes_daily_average() {
+        void computesDailyAverage() {
             // March has 31 days; total = 310.00 -> dailyAverage = 10.00
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(310.00));
@@ -139,7 +139,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("wraps previous month to December of prior year when month is January")
-        void wraps_previous_month_to_december_for_january() {
+        void wrapsPreviousMonthToDecemberForJanuary() {
             // Current period: January 2026. Previous: December 2025.
             when(reportRepository.sumByMonth(USER_ID, 2026, 1, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(500.00));
@@ -167,7 +167,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("sets trend UP when current > previous")
-        void trend_is_up_when_current_exceeds_previous() {
+        void trendIsUpWhenCurrentExceedsPrevious() {
             stubMonthlyWithTotal(2026, 3, BigDecimal.valueOf(1500), BigDecimal.valueOf(1000));
 
             MonthlyReport report = service.getMonthlyReport(
@@ -180,7 +180,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("sets trend DOWN when current < previous")
-        void trend_is_down_when_current_below_previous() {
+        void trendIsDownWhenCurrentBelowPrevious() {
             stubMonthlyWithTotal(2026, 3, BigDecimal.valueOf(800), BigDecimal.valueOf(1200));
 
             MonthlyReport report = service.getMonthlyReport(
@@ -191,7 +191,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("sets trend FLAT when current equals previous")
-        void trend_is_flat_when_equal() {
+        void trendIsFlatWhenEqual() {
             stubMonthlyWithTotal(2026, 3, BigDecimal.valueOf(1000), BigDecimal.valueOf(1000));
 
             MonthlyReport report = service.getMonthlyReport(
@@ -202,7 +202,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("maps category rows to CategoryBreakdown with Spanish label and percentage")
-        void maps_category_breakdown_with_label_and_percentage() {
+        void mapsCategoryBreakdownWithLabelAndPercentage() {
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(1000.00));
             when(reportRepository.countByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -233,7 +233,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("maps week rows to WeekBreakdown with label Sem N")
-        void maps_week_breakdown_with_label() {
+        void mapsWeekBreakdownWithLabel() {
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(300.00));
             when(reportRepository.countByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -259,7 +259,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("includes top merchants in report")
-        void includes_top_merchants() {
+        void includesTopMerchants() {
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(200.00));
             when(reportRepository.countByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -285,7 +285,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("passes accountId filter down to all repository calls")
-        void passes_account_filter_to_repository() {
+        void passesAccountFilterToRepository() {
             UUID account = UUID.randomUUID();
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, account, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(500.00));
@@ -311,7 +311,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("passes categoryId filter down to all repository calls")
-        void passes_category_filter_to_repository() {
+        void passesCategoryFilterToRepository() {
             UUID category = UUID.randomUUID();
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, category, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(300.00));
@@ -337,7 +337,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("passes tagId filter down to all repository calls")
-        void passes_tag_filter_to_repository() {
+        void passesTagFilterToRepository() {
             UUID tag = UUID.randomUUID();
             when(reportRepository.sumByMonth(USER_ID, 2026, 3, PEN, NO_ACCOUNT, NO_CATEGORY, tag))
                     .thenReturn(BigDecimal.valueOf(150.00));
@@ -415,7 +415,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("returns zeroed summary when no expenses exist")
-        void returns_zeroed_summary_for_empty_year() {
+        void returnsZeroedSummaryForEmptyYear() {
             stubYearlyEmpty(2026);
 
             YearlyReport report = service.getYearlyReport(
@@ -427,7 +427,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("computes monthly average as total divided by 12")
-        void computes_monthly_average() {
+        void computesMonthlyAverage() {
             // total = 1200.00 -> monthlyAverage = 100.00
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(1200.00));
@@ -452,7 +452,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("maps month rows with abbreviated Spanish labels")
-        void maps_month_rows_with_abbreviated_labels() {
+        void mapsMonthRowsWithAbbreviatedLabels() {
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(500));
             when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -479,7 +479,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("identifies peak and lowest month from byMonth data")
-        void identifies_peak_and_lowest_months() {
+        void identifiesPeakAndLowestMonths() {
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(500));
             when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -507,7 +507,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("maps category breakdown with Spanish label and percentage")
-        void maps_category_breakdown_with_label_and_percentage() {
+        void mapsCategoryBreakdownWithLabelAndPercentage() {
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(1000));
             when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -535,7 +535,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("highlights topCategory as first entry of byCategory")
-        void highlights_top_category_is_first_category() {
+        void highlightsTopCategoryIsFirstCategory() {
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(1000));
             when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
@@ -561,7 +561,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("highlights are null when no data exists")
-        void highlights_are_null_when_no_data() {
+        void highlightsAreNullWhenNoData() {
             stubYearlyEmpty(2026);
 
             YearlyReport report = service.getYearlyReport(
@@ -574,7 +574,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("passes accountId filter down to all repository calls")
-        void passes_account_filter_to_repository() {
+        void passesAccountFilterToRepository() {
             UUID account = UUID.randomUUID();
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, account, NO_CATEGORY, NO_TAG))
                     .thenReturn(BigDecimal.valueOf(800.00));
@@ -598,7 +598,7 @@ class ReportServiceTest {
 
         @Test
         @DisplayName("passes tagId filter down to all repository calls")
-        void passes_tag_filter_to_repository() {
+        void passesTagFilterToRepository() {
             UUID tag = UUID.randomUUID();
             when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, tag))
                     .thenReturn(BigDecimal.valueOf(200.00));
