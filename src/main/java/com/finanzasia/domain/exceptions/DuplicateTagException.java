@@ -5,7 +5,7 @@ public class DuplicateTagException extends RuntimeException {
     private final String name;
 
     public DuplicateTagException(String name) {
-        super("A tag with that name already exists.");
+        super("A tag named '" + name + "' already exists.");
         this.name = name;
     }
 
