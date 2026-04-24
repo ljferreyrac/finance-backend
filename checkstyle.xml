@@ -9,6 +9,12 @@
     <!-- No tab characters -->
     <module name="FileTabCharacter"/>
 
+    <!-- Line length: 120 chars, ignoring imports and URLs -->
+    <module name="LineLength">
+        <property name="max" value="120"/>
+        <property name="ignorePattern" value="^package.*|^import.*|https?://|ftp://"/>
+    </module>
+
     <module name="TreeWalker">
 
         <!-- Imports -->
@@ -26,12 +32,6 @@
         <module name="StaticVariableName"/>
         <module name="PackageName">
             <property name="format" value="^[a-z]+(\.[a-z][a-z0-9]*)*$"/>
-        </module>
-
-        <!-- Line length: 120 chars, ignoring imports and URLs -->
-        <module name="LineLength">
-            <property name="max" value="120"/>
-            <property name="ignorePattern" value="^package.*|^import.*|https?://|ftp://"/>
         </module>
 
         <!-- Code quality -->
