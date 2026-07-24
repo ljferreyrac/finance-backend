@@ -2,14 +2,12 @@ package com.finanzasia.infrastructure.persistence;
 
 import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.model.Transaction;
+import com.finanzasia.domain.model.TransactionCursor;
 import com.finanzasia.domain.model.TransactionFilter;
 import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.port.out.TransactionRepository;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -58,7 +56,7 @@ public class JpaTransactionRepository implements TransactionRepository {
         String nextCursor = null;
         if (hasMore && !items.isEmpty()) {
             Transaction last = items.get(items.size() - 1);
-            nextCursor = encodeCursor(last.getTransactionDate(), last.getId());
+            nextCursor = TransactionCursor.encode(last.getTransactionDate(), last.getId());
         }
 
         return new TransactionPage(items, nextCursor, hasMore);
@@ -123,29 +121,4 @@ public class JpaTransactionRepository implements TransactionRepository {
         jpaPort.softDelete(transactionId, now);
     }
 
-    public static String encodeCursor(LocalDate date, UUID id) {
-        String raw = date.toString() + ":" + id.toString();
-        return Base64.getUrlEncoder().withoutPadding()
-                .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
-    }
-
-    // Returns null if the cursor is null or malformed, treated as "no cursor".
-    public static CursorParts decodeCursor(String cursor) {
-        if (cursor == null || cursor.isBlank()) {
-            return null;
-        }
-        try {
-            String raw = new String(
-                    Base64.getUrlDecoder().decode(cursor), StandardCharsets.UTF_8);
-            String[] parts = raw.split(":", 2);
-            if (parts.length != 2) {
-                return null;
-            }
-            return new CursorParts(LocalDate.parse(parts[0]), UUID.fromString(parts[1]));
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    public record CursorParts(LocalDate date, UUID id) {}
 }

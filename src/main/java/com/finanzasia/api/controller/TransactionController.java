@@ -11,13 +11,13 @@ import com.finanzasia.api.security.UserPrincipal;
 import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.Transaction;
+import com.finanzasia.domain.model.TransactionCursor;
 import com.finanzasia.domain.model.TransactionFilter;
 import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.port.in.TransactionUseCase;
 import com.finanzasia.domain.port.out.AccountRepository;
 import com.finanzasia.domain.port.out.CategoryRepository;
-import com.finanzasia.infrastructure.persistence.JpaTransactionRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -95,8 +95,7 @@ public class TransactionController {
 
         int safeLimit = Math.min(Math.max(limit, 1), MAX_LIMIT);
 
-        JpaTransactionRepository.CursorParts cursorParts =
-                JpaTransactionRepository.decodeCursor(cursor);
+        TransactionCursor cursorParts = TransactionCursor.decode(cursor);
 
         TransactionFilter filter = new TransactionFilter(
                 principal.getId(),
