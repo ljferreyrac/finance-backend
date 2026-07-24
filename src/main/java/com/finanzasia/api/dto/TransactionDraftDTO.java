@@ -4,10 +4,8 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Response body for a single AI-extracted transaction draft.
- * All identifier fields are serialized as strings so clients do not need to
- * handle UUID types natively. {@code categoryId} and {@code accountId} may be
- * null when the AI could not match them to a known user resource.
+ * IDs are serialized as strings so clients avoid native UUID handling.
+ * {@code categoryId}/{@code accountId} are null when the AI found no matching user resource.
  */
 public record TransactionDraftDTO(
         String type,

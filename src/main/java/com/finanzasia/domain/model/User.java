@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Pure domain model for a registered user.
  * No JPA or framework annotations are allowed here.
  * The password hash is carried in this object only for the authentication
  * flow; it must never be serialized to API responses.
@@ -52,7 +51,7 @@ public final class User {
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getDeletedAt() { return deletedAt; }
 
-    /** Returns true when the account has been soft-deleted. */
+    /** True once the user has been soft-deleted, never hard-removed. */
     public boolean isDeleted() {
         return deletedAt != null;
     }

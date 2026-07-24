@@ -6,11 +6,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Immutable value object representing a single transaction extracted by the AI
- * from a voice transcript. All fields except {@code amount} and {@code transactionDate}
- * may be null when the AI could not determine them with sufficient confidence.
- * The caller is expected to present this draft to the user for review before
- * committing it as a real transaction.
+ * Extracted by the AI from a voice transcript. All fields except {@code amount} and
+ * {@code transactionDate} may be null when the AI could not determine them with
+ * sufficient confidence; the user reviews the draft before it becomes a real transaction.
  */
 public record TransactionDraft(
         TransactionType type,

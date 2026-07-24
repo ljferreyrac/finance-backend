@@ -1,6 +1,7 @@
 package com.finanzasia.api.dto;
 
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.Pattern;
@@ -18,6 +19,7 @@ public record UpdateAccountRequest(
         String bank,
 
         @DecimalMin("0")
+        @Digits(integer = 7, fraction = 2)
         BigDecimal creditLimit,
 
         @Min(1) @Max(31)
@@ -29,7 +31,8 @@ public record UpdateAccountRequest(
         @Pattern(regexp = "^#[0-9A-Fa-f]{6}$", message = "color must be a 6-digit hex code, e.g. #FF5733")
         String color,
 
-        boolean isActive,
+        /** Null means "no change". */
+        Boolean isActive,
 
         UUID linkedAccountId
 ) {}

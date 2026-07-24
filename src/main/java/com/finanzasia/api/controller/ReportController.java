@@ -123,10 +123,6 @@ public class ReportController {
         return YearlyReportDTO.from(report);
     }
 
-    // ------------------------------------------------------------------
-    // Validation helpers
-    // ------------------------------------------------------------------
-
     private void validateParams(int year, int month, String currency) {
         validateYearAndCurrency(year, currency);
         if (month < 1 || month > 12) {

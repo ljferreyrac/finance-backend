@@ -38,10 +38,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html",
                                 "/v3/api-docs/**").permitAll()
-                        // /error is an internal Tomcat forward used when an unhandled
-                        // exception occurs. The JWT filter is skipped for error dispatches
-                        // (OncePerRequestFilter default), so we must permit it here or
-                        // Spring Security would return 401/403 instead of the real 5xx.
+                        // /error is Tomcat's internal forward for unhandled exceptions; the JWT
+                        // filter skips it, so without this it would 401/403 instead of the real 5xx.
                         .requestMatchers("/error").permitAll()
                         .anyRequest().authenticated())
                 .exceptionHandling(ex -> ex

@@ -5,9 +5,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
 
-/**
- * Compact account reference embedded inside a transaction response.
- */
 @Schema(description = "Compact account reference embedded inside a transaction response")
 public record AccountSummaryDTO(
 

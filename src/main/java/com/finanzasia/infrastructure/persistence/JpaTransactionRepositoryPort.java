@@ -11,11 +11,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Spring Data JPA interface for transaction persistence.
- * The paged list query uses a native SQL cursor approach (keyset pagination)
- * so it remains efficient for large result sets.
- */
+// The paged list query uses native SQL keyset pagination to stay efficient on large result sets.
 public interface JpaTransactionRepositoryPort extends JpaRepository<TransactionEntity, UUID> {
 
     Optional<TransactionEntity> findByIdAndUserIdAndDeletedAtIsNull(UUID id, UUID userId);

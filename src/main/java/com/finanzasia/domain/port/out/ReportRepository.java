@@ -5,19 +5,13 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Output port for all report aggregation queries.
- * Implementations live in the infrastructure layer; this interface
- * must remain free of any JPA, Spring, or JDBC types.
+ * Must remain free of any JPA, Spring, or JDBC types.
  *
  * All methods accept optional filter parameters ({@code accountId},
  * {@code categoryId}, {@code tagId}). Passing {@code null} for any of
  * them means "no filter" (include all rows that match the other criteria).
  */
 public interface ReportRepository {
-
-    // ------------------------------------------------------------------
-    // Monthly expense queries
-    // ------------------------------------------------------------------
 
     BigDecimal sumByMonth(UUID userId, int year, int month, String currency,
                           UUID accountId, UUID categoryId, UUID tagId);
@@ -34,19 +28,11 @@ public interface ReportRepository {
     List<MerchantRow> topMerchantsByMonth(UUID userId, int year, int month, String currency,
                                           UUID accountId, UUID categoryId, UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Monthly income queries
-    // ------------------------------------------------------------------
-
     BigDecimal sumIncomeByMonth(UUID userId, int year, int month, String currency,
                                 UUID accountId, UUID categoryId, UUID tagId);
 
     long countIncomeByMonth(UUID userId, int year, int month, String currency,
                             UUID accountId, UUID categoryId, UUID tagId);
-
-    // ------------------------------------------------------------------
-    // Yearly expense queries
-    // ------------------------------------------------------------------
 
     BigDecimal sumByYear(UUID userId, int year, String currency,
                          UUID accountId, UUID categoryId, UUID tagId);
@@ -63,20 +49,13 @@ public interface ReportRepository {
     List<MerchantRow> topMerchantsByYear(UUID userId, int year, String currency,
                                          UUID accountId, UUID categoryId, UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Yearly income queries
-    // ------------------------------------------------------------------
-
     BigDecimal sumIncomeByYear(UUID userId, int year, String currency,
                                UUID accountId, UUID categoryId, UUID tagId);
 
     long countIncomeByYear(UUID userId, int year, String currency,
                            UUID accountId, UUID categoryId, UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Projection interfaces (column aliases must match getter names)
-    // ------------------------------------------------------------------
-
+    /** Column aliases in the native queries must match these getter names. */
     interface CategoryRow {
         String getCategory();
         BigDecimal getAmount();

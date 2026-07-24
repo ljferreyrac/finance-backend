@@ -45,7 +45,7 @@ public class TransactionEntity {
     @Column(name = "currency", nullable = false, length = 3)
     private String currency;
 
-    // Plain UUID columns -- no @ManyToOne joins to keep queries simple and avoid lazy-loading issues
+    // Plain UUID columns, no @ManyToOne joins, to keep queries simple and avoid lazy-loading issues.
     @Column(name = "account_id")
     private UUID accountId;
 
@@ -187,8 +187,7 @@ public class TransactionEntity {
         entity.setDeletedAt(domain.getDeletedAt());
         entity.setAmountLocal(domain.getAmountLocal());
         entity.setExchangeRateApplied(domain.getExchangeRateApplied());
-        // Tags are managed separately via the service layer; do not overwrite here
-        // to avoid replacing the lazily-loaded collection on partial updates.
+        // Tags are managed separately via the service layer to avoid replacing the lazily-loaded collection.
         return entity;
     }
 }

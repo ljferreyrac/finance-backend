@@ -4,8 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Immutable domain value object that carries all data for a full
- * calendar year report. No JPA or framework annotations allowed here.
+ * No JPA or framework annotations allowed here.
  */
 public record YearlyReport(
         int year,
@@ -17,11 +16,6 @@ public record YearlyReport(
         Highlights highlights
 ) {
 
-    // ------------------------------------------------------------------
-    // Nested value types
-    // ------------------------------------------------------------------
-
-    /** High-level expense summary for the year. */
     public record YearlySummary(
             BigDecimal totalAmount,
             String currency,
@@ -29,17 +23,13 @@ public record YearlyReport(
             BigDecimal monthlyAverage
     ) {}
 
-    /** High-level income summary for the year. */
     public record IncomeSummary(
             BigDecimal total,
             long transactionCount,
             String currency
     ) {}
 
-    /**
-     * Spending aggregated by calendar month.
-     * {@code label} is the abbreviated Spanish month name, e.g. "Ene".
-     */
+    /** {@code label} is the abbreviated Spanish month name, e.g. "Ene". */
     public record MonthBreakdown(
             int month,
             String label,
@@ -48,7 +38,6 @@ public record YearlyReport(
     ) {}
 
     /**
-     * Spending aggregated by expense category.
      * {@code label} is the display name returned directly from the categories table.
      * {@code percentage} is rounded to one decimal place.
      */
@@ -60,26 +49,18 @@ public record YearlyReport(
             double percentage
     ) {}
 
-    /** Top merchant by total spend within the year. */
     public record MerchantSummary(
             String name,
             BigDecimal amount,
             long count
     ) {}
 
-    /**
-     * Notable data points for the year.
-     * {@code lowestMonth} only considers months that have at least one transaction.
-     */
+    /** {@code lowestMonth} only considers months that have at least one transaction. */
     public record Highlights(
             MonthBreakdown peakMonth,
             MonthBreakdown lowestMonth,
             CategoryBreakdown topCategory
     ) {}
-
-    // ------------------------------------------------------------------
-    // Spanish label helpers
-    // ------------------------------------------------------------------
 
     private static final String[] MONTH_ABBR = {
             "", "Ene", "Feb", "Mar", "Abr", "May", "Jun",

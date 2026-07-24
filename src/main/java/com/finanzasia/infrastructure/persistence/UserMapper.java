@@ -2,7 +2,6 @@ package com.finanzasia.infrastructure.persistence;
 
 import com.finanzasia.domain.model.User;
 
-/** Maps between the JPA {@link UserEntity} and the domain {@link User} model. */
 public class UserMapper {
 
     public User toDomain(UserEntity entity) {

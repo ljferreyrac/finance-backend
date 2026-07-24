@@ -7,9 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Adapter that implements the domain CategoryRepository output port using Spring Data JPA.
- */
 public class JpaCategoryRepository implements CategoryRepository {
 
     private final JpaCategoryRepositoryPort jpaPort;

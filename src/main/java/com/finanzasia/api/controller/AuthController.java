@@ -116,8 +116,6 @@ public class AuthController {
         logoutUseCase.logout(request.refreshToken());
     }
 
-    // --- presentation helpers ---
-
     private AuthResponse toResponse(AuthTokens tokens) {
         return new AuthResponse(
                 tokens.accessToken(),

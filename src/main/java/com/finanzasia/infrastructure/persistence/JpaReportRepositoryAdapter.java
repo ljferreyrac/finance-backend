@@ -6,10 +6,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Adapts {@link JpaReportRepositoryPort} (Spring Data) to the domain
- * {@link ReportRepository} port.
- */
 public class JpaReportRepositoryAdapter implements ReportRepository {
 
     private final JpaReportRepositoryPort jpaPort;
@@ -17,10 +13,6 @@ public class JpaReportRepositoryAdapter implements ReportRepository {
     public JpaReportRepositoryAdapter(JpaReportRepositoryPort jpaPort) {
         this.jpaPort = jpaPort;
     }
-
-    // ------------------------------------------------------------------
-    // Monthly expense
-    // ------------------------------------------------------------------
 
     @Override
     public BigDecimal sumByMonth(UUID userId, int year, int month, String currency,
@@ -58,10 +50,6 @@ public class JpaReportRepositoryAdapter implements ReportRepository {
                 userId, year, month, currency, accountId, categoryId, tagId);
     }
 
-    // ------------------------------------------------------------------
-    // Monthly income
-    // ------------------------------------------------------------------
-
     @Override
     public BigDecimal sumIncomeByMonth(UUID userId, int year, int month, String currency,
                                        UUID accountId, UUID categoryId, UUID tagId) {
@@ -75,10 +63,6 @@ public class JpaReportRepositoryAdapter implements ReportRepository {
         return jpaPort.countIncomeByMonth(
                 userId, year, month, currency, accountId, categoryId, tagId);
     }
-
-    // ------------------------------------------------------------------
-    // Yearly expense
-    // ------------------------------------------------------------------
 
     @Override
     public BigDecimal sumByYear(UUID userId, int year, String currency,
@@ -112,10 +96,6 @@ public class JpaReportRepositoryAdapter implements ReportRepository {
         return jpaPort.findTopMerchantsByYear(
                 userId, year, currency, accountId, categoryId, tagId);
     }
-
-    // ------------------------------------------------------------------
-    // Yearly income
-    // ------------------------------------------------------------------
 
     @Override
     public BigDecimal sumIncomeByYear(UUID userId, int year, String currency,

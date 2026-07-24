@@ -6,10 +6,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Output port for account persistence.
- * Implementations live in the infrastructure layer.
- */
 public interface AccountRepository {
 
     List<Account> findAllByUser(UUID userId);

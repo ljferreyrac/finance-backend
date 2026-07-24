@@ -8,10 +8,6 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Output port for transaction persistence.
- * Implementations live in the infrastructure layer.
- */
 public interface TransactionRepository {
 
     TransactionPage findWithFilter(TransactionFilter filter);

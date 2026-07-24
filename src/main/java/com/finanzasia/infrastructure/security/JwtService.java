@@ -16,13 +16,9 @@ import java.util.Date;
 import java.util.UUID;
 
 /**
- * Central JWT utility: creates and validates both access and refresh tokens.
- *
- * <p>Access token claims: {@code sub} (userId), {@code email}, {@code iat}, {@code exp}.
- * <p>Refresh token claims: {@code sub} (userId), {@code jti} (random UUID used as Redis key),
- * {@code iat}, {@code exp}.
- *
- * <p>Both tokens are signed with HS256.
+ * Creates and validates access and refresh tokens, both signed with HS256.
+ * Access tokens carry {@code sub}, {@code email}. Refresh tokens carry {@code sub} and
+ * a random {@code jti} used as the Redis key for per-token revocation.
  */
 @Component
 public class JwtService {
@@ -40,12 +36,10 @@ public class JwtService {
         this.refreshTokenExpiryMs = refreshTokenExpiryMs;
     }
 
-    /** Returns the access token TTL in seconds for use in API responses. */
     public long accessExpiresInSeconds() {
         return accessTokenExpiryMs / 1000;
     }
 
-    /** Returns the refresh token TTL as a {@link java.time.Duration}. */
     public java.time.Duration refreshTokenDuration() {
         return java.time.Duration.ofMillis(refreshTokenExpiryMs);
     }
@@ -61,11 +55,7 @@ public class JwtService {
                 .compact();
     }
 
-    /**
-     * Generates a refresh token for the given user.
-     * A random UUID is used as the {@code jti} claim and stored in Redis
-     * to allow per-token revocation.
-     */
+    // The jti claim is a random UUID, stored in Redis to allow per-token revocation.
     public String generateRefreshToken(UUID userId) {
         Instant now = Instant.now();
         return Jwts.builder()
@@ -77,11 +67,7 @@ public class JwtService {
                 .compact();
     }
 
-    /**
-     * Parses and validates the token signature and expiry.
-     *
-     * @throws InvalidTokenException if the token is malformed, expired, or has an invalid signature
-     */
+    /** @throws InvalidTokenException if the token is malformed, expired, or has an invalid signature */
     public Claims parseToken(String token) {
         try {
             return Jwts.parser()
@@ -94,20 +80,12 @@ public class JwtService {
         }
     }
 
-    /**
-     * Extracts the {@code jti} (JWT ID) claim from a refresh token.
-     *
-     * @throws InvalidTokenException if the token cannot be parsed
-     */
+    /** @throws InvalidTokenException if the token cannot be parsed */
     public String extractJti(String token) {
         return parseToken(token).getId();
     }
 
-    /**
-     * Extracts the {@code sub} claim and converts it to a {@link UUID}.
-     *
-     * @throws InvalidTokenException if the token cannot be parsed or sub is missing
-     */
+    /** @throws InvalidTokenException if the token cannot be parsed or sub is missing */
     public UUID extractUserId(String token) {
         String subject = parseToken(token).getSubject();
         try {

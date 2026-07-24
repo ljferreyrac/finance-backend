@@ -12,8 +12,8 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 /**
- * Transcribes audio using the Groq Whisper API (OpenAI-compatible endpoint).
- * Model: whisper-large-v3, language fixed to Spanish for accuracy on Peruvian speech.
+ * Transcribes audio using the Groq Whisper API. Language is fixed to Spanish
+ * for accuracy on Peruvian speech.
  */
 @Service
 public class GroqTranscriptionService implements AudioTranscriptionPort {
@@ -57,8 +57,7 @@ public class GroqTranscriptionService implements AudioTranscriptionPort {
         }
     }
 
-    // ByteArrayResource subclass that also exposes a filename so Spring sets the
-    // correct Content-Disposition header in the multipart request.
+    // Exposes a filename so Spring sets the multipart Content-Disposition header correctly.
     private static final class NamedByteArrayResource extends ByteArrayResource {
         private final String filename;
 

@@ -7,10 +7,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Output port for tag persistence.
- * Implementations live in the infrastructure layer.
- */
 public interface TagRepository {
 
     List<Tag> findByUserId(UUID userId);

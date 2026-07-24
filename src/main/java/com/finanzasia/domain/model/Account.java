@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Pure domain entity representing a user-owned financial account.
  * No JPA or framework annotations are allowed here.
  */
 public final class Account {
@@ -79,35 +78,26 @@ public final class Account {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
-    /** Returns true when this account is owned by the given user. */
     public boolean belongsTo(UUID ownerId) {
         return userId.equals(ownerId);
     }
 
-    /** Marks this account as the user's default and updates the timestamp. */
     public void markAsDefault(Instant now) {
         this.isDefault = true;
         this.updatedAt = now;
     }
 
-    /** Clears the default flag and updates the timestamp. */
     public void clearDefault(Instant now) {
         this.isDefault = false;
         this.updatedAt = now;
     }
 
-    /**
-     * Subtracts the given amount from the current balance.
-     * For credit cards this increases the outstanding balance (balance goes negative).
-     */
+    /** For credit cards, debiting increases the outstanding balance (balance goes negative). */
     public void debit(BigDecimal amount) {
         this.currentBalance = this.currentBalance.subtract(amount);
     }
 
-    /**
-     * Adds the given amount to the current balance.
-     * For credit cards this reduces the outstanding balance.
-     */
+    /** For credit cards, crediting reduces the outstanding balance. */
     public void credit(BigDecimal amount) {
         this.currentBalance = this.currentBalance.add(amount);
     }

@@ -9,11 +9,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 
-/**
- * Bridges the domain {@link UserRepository} with Spring Security's
- * {@link UserDetailsService}. The loaded principal is used by
- * {@link JwtAuthFilter} to populate the security context.
- */
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 

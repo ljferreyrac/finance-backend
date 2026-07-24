@@ -13,20 +13,12 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Spring Data JPA interface for report aggregation queries.
- * All queries target the {@code transactions} table and filter by type
- * so that expense and income reports remain independent.
- *
- * Optional filters ({@code accountId}, {@code categoryId}, {@code tagId}) are applied
- * via the {@code IS NULL OR} pattern: passing {@code null} disables each filter
- * without requiring a separate query variant.
- * Tag filtering uses an EXISTS subquery against the {@code transaction_tags} join table.
+ * Optional filters ({@code accountId}, {@code categoryId}, {@code tagId}) use the
+ * {@code IS NULL OR} pattern so passing {@code null} disables a filter without a
+ * separate query variant. Tag filtering uses an EXISTS subquery against
+ * {@code transaction_tags}.
  */
 public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity, UUID> {
-
-    // ------------------------------------------------------------------
-    // Monthly: expense totals
-    // ------------------------------------------------------------------
 
     @Query(value = """
             SELECT COALESCE(SUM(amount), 0)
@@ -76,10 +68,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Monthly: income totals
-    // ------------------------------------------------------------------
-
     @Query(value = """
             SELECT COALESCE(SUM(amount), 0)
             FROM transactions
@@ -128,10 +116,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Monthly: category breakdown (expenses only)
-    // ------------------------------------------------------------------
-
     @Query(value = """
             SELECT c.name    AS category,
                    SUM(t.amount) AS amount,
@@ -161,10 +145,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Monthly: week-of-month breakdown (expenses only, weeks 1-5)
-    // ------------------------------------------------------------------
-
     @Query(value = """
             SELECT CAST(CEIL(EXTRACT(DAY FROM transaction_date) / 7.0) AS INTEGER) AS weekNumber,
                    SUM(amount) AS amount,
@@ -192,10 +172,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("accountId") UUID accountId,
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
-
-    // ------------------------------------------------------------------
-    // Monthly: top merchants (expenses only)
-    // ------------------------------------------------------------------
 
     @Query(value = """
             SELECT merchant AS name,
@@ -226,10 +202,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("accountId") UUID accountId,
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
-
-    // ------------------------------------------------------------------
-    // Yearly: expense totals
-    // ------------------------------------------------------------------
 
     @Query(value = """
             SELECT COALESCE(SUM(amount), 0)
@@ -275,10 +247,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Yearly: income totals
-    // ------------------------------------------------------------------
-
     @Query(value = """
             SELECT COALESCE(SUM(amount), 0)
             FROM transactions
@@ -323,10 +291,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
 
-    // ------------------------------------------------------------------
-    // Yearly: month breakdown (expenses only)
-    // ------------------------------------------------------------------
-
     @Query(value = """
             SELECT CAST(EXTRACT(MONTH FROM transaction_date) AS INTEGER) AS month,
                    SUM(amount) AS amount,
@@ -352,10 +316,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("accountId") UUID accountId,
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
-
-    // ------------------------------------------------------------------
-    // Yearly: category breakdown (expenses only)
-    // ------------------------------------------------------------------
 
     @Query(value = """
             SELECT c.name    AS category,
@@ -383,10 +343,6 @@ public interface JpaReportRepositoryPort extends JpaRepository<TransactionEntity
             @Param("accountId") UUID accountId,
             @Param("categoryId") UUID categoryId,
             @Param("tagId") UUID tagId);
-
-    // ------------------------------------------------------------------
-    // Yearly: top merchants (expenses only)
-    // ------------------------------------------------------------------
 
     @Query(value = """
             SELECT merchant AS name,

@@ -52,6 +52,10 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         authService = new AuthService(userRepository, tokenStore, jwtService, passwordEncoder);
+        // The constructor encodes a dummy hash for timing equalization;
+        // clear that interaction so per-test verifications only see calls
+        // made by the method under test.
+        org.mockito.Mockito.clearInvocations(passwordEncoder);
     }
 
     // --- helpers ---
@@ -157,12 +161,16 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("throws InvalidCredentialsException when user is not found")
+        @DisplayName("throws InvalidCredentialsException when user is not found, still hashing once for timing equalization")
         void userNotFound() {
             when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
 
             assertThatThrownBy(() -> authService.login("ghost@test.com", "pass"))
                     .isInstanceOf(InvalidCredentialsException.class);
+
+            // One BCrypt comparison must run against the dummy hash so that
+            // unknown emails are indistinguishable from wrong passwords by timing.
+            verify(passwordEncoder).matches(eq("pass"), any());
         }
 
         @Test
@@ -174,7 +182,9 @@ class AuthServiceTest {
             assertThatThrownBy(() -> authService.login("del@test.com", "pass"))
                     .isInstanceOf(InvalidCredentialsException.class);
 
-            verify(passwordEncoder, never()).matches(anyString(), anyString());
+            // The comparison still runs (timing equalization) but no tokens are issued.
+            verify(passwordEncoder).matches("pass", "hash");
+            verify(tokenStore, never()).storeRefreshToken(anyString(), any(), any());
         }
 
         @Test
@@ -222,15 +232,21 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("throws InvalidTokenException when jti is not in the store")
+        @DisplayName("treats an unknown jti as reuse: revokes all sessions for the user")
         void revokedToken() {
+            UUID victimId = UUID.randomUUID();
             when(jwtService.extractJti("bad-refresh")).thenReturn("missing-jti");
             when(tokenStore.getUserIdForRefreshToken("missing-jti")).thenReturn(Optional.empty());
+            when(jwtService.extractUserId("bad-refresh")).thenReturn(victimId);
 
             assertThatThrownBy(() -> authService.refresh("bad-refresh"))
                     .isInstanceOf(InvalidTokenException.class);
 
+            // Reuse of a rotated token is a theft signal: every session of the
+            // token's owner must be revoked, and no new tokens issued.
+            verify(tokenStore).revokeAllForUser(victimId);
             verify(tokenStore, never()).invalidateRefreshToken(anyString());
+            verify(tokenStore, never()).storeRefreshToken(anyString(), any(), any());
         }
 
         @Test

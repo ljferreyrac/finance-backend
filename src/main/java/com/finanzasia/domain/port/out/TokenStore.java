@@ -8,10 +8,7 @@ import java.util.UUID;
 public interface TokenStore {
 
     /**
-     * Stores a refresh token identifier with its owning user and TTL.
-     *
      * @param tokenId the JTI claim value (random UUID string)
-     * @param userId  the owner of the token
      * @param ttl     how long the entry should live (matches the JWT expiry)
      */
     void storeRefreshToken(String tokenId, UUID userId, Duration ttl);
@@ -23,6 +20,13 @@ public interface TokenStore {
      */
     Optional<UUID> getUserIdForRefreshToken(String tokenId);
 
-    /** Removes the token from the store, effectively revoking it. */
     void invalidateRefreshToken(String tokenId);
+
+    /**
+     * Revokes every active refresh token belonging to the given user,
+     * logging them out of all devices. Used when refresh-token reuse is
+     * detected (possible theft) and available for a future
+     * "log out everywhere" feature.
+     */
+    void revokeAllForUser(UUID userId);
 }

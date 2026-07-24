@@ -82,11 +82,6 @@ public record MonthlyReportDTO(
             @Schema(example = "5") long count
     ) {}
 
-    // ------------------------------------------------------------------
-    // Factory
-    // ------------------------------------------------------------------
-
-    /** Converts a domain {@link MonthlyReport} to its API representation. */
     public static MonthlyReportDTO from(MonthlyReport report) {
         Period period = new Period(
                 report.period().year(),

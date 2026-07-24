@@ -6,9 +6,6 @@ import com.finanzasia.domain.port.out.ExchangeRateRepository;
 import java.time.LocalDate;
 import java.util.Optional;
 
-/**
- * Adapter that implements the domain ExchangeRateRepository output port using Spring Data JPA.
- */
 public class JpaExchangeRateRepository implements ExchangeRateRepository {
 
     private final JpaExchangeRateRepositoryPort jpaPort;

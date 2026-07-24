@@ -19,15 +19,9 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Orchestrates all authentication use cases:
- * registration, login, token refresh, and logout.
- *
- * <p>Business invariants enforced here:
- * <ul>
- *   <li>Email uniqueness is checked before hashing to avoid wasted BCrypt cycles.</li>
- *   <li>Soft-deleted accounts are treated as non-existent during login.</li>
- *   <li>Refresh tokens are rotated on every use (old token invalidated, new token issued).</li>
- * </ul>
+ * Registration, login, refresh, and logout. Email uniqueness is checked before hashing to
+ * avoid wasted BCrypt cycles; soft-deleted accounts are treated as non-existent at login;
+ * refresh tokens rotate on every use.
  */
 @Service
 public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase {
@@ -36,6 +30,9 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
     private final TokenStore tokenStore;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
+
+    /** Compared against when the email is unknown, so login timing does not leak whether an account exists. */
+    private final String dummyPasswordHash;
 
     public AuthService(
             UserRepository userRepository,
@@ -46,6 +43,8 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
         this.tokenStore = tokenStore;
         this.jwtService = jwtService;
         this.passwordEncoder = passwordEncoder;
+        this.dummyPasswordHash = passwordEncoder.encode(
+                "timing-equalizer-" + UUID.randomUUID());
     }
 
     @Override
@@ -79,14 +78,13 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
 
     @Override
     public AuthTokens login(String email, String rawPassword) {
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(InvalidCredentialsException::new);
+        User user = userRepository.findByEmail(email).orElse(null);
 
-        if (user.isDeleted()) {
-            throw new InvalidCredentialsException();
-        }
+        // Always run exactly one BCrypt comparison so "unknown email" and "wrong password" take the same time.
+        String hashToCheck = user != null ? user.getPasswordHash() : dummyPasswordHash;
+        boolean passwordMatches = passwordEncoder.matches(rawPassword, hashToCheck);
 
-        if (!passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+        if (user == null || user.isDeleted() || !passwordMatches) {
             throw new InvalidCredentialsException();
         }
 
@@ -98,7 +96,13 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
         String jti = jwtService.extractJti(refreshToken);
 
         UUID userId = tokenStore.getUserIdForRefreshToken(jti)
-                .orElseThrow(() -> new InvalidTokenException("token has been revoked or does not exist"));
+                .orElseThrow(() -> {
+                    // Valid signature but unknown jti means the token was already rotated/revoked,
+                    // possibly reused after theft. Treat as compromised and revoke all sessions.
+                    UUID suspectUserId = jwtService.extractUserId(refreshToken);
+                    tokenStore.revokeAllForUser(suspectUserId);
+                    return new InvalidTokenException("token has been revoked or does not exist");
+                });
 
         tokenStore.invalidateRefreshToken(jti);
 
@@ -117,8 +121,6 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
             // Silently ignore: if the token is already invalid there is nothing to revoke.
         }
     }
-
-    // --- private helpers ---
 
     private AuthTokens issueTokenPair(User user) {
         String accessToken = jwtService.generateAccessToken(user);

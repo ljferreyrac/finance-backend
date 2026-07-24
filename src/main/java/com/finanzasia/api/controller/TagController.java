@@ -110,8 +110,6 @@ public class TagController {
         tagUseCase.deleteTag(principal.getId(), id);
     }
 
-    // --- presentation helpers ---
-
     private TagDTO toDTO(com.finanzasia.domain.model.Tag tag) {
         return new TagDTO(tag.id(), tag.name(), tag.color());
     }

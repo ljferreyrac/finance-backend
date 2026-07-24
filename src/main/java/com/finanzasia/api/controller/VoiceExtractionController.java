@@ -80,7 +80,7 @@ public class VoiceExtractionController {
 
     @Operation(
             summary = "Transcribe audio and extract transactions",
-            description = "Accepts a raw audio file (m4a, mp3, wav, ogg, flac — max 25 MB). "
+            description = "Accepts a raw audio file (m4a, mp3, wav, ogg, flac, max 25 MB). "
                     + "Transcribes it with Groq Whisper, then extracts transaction drafts with Gemini. "
                     + "Returns the same draft list as /extract-voice."
     )
@@ -111,6 +111,10 @@ public class VoiceExtractionController {
                     ? audio.getOriginalFilename()
                     : "voice.m4a";
 
+            if (!hasAllowedAudioExtension(filename)) {
+                return ResponseEntity.badRequest().build();
+            }
+
             List<TransactionDraft> drafts = transcribeAndExtractUseCase
                     .transcribeAndExtract(principal.getId(), audioBytes, filename, timezone);
 
@@ -121,9 +125,18 @@ public class VoiceExtractionController {
         }
     }
 
-    // ------------------------------------------------------------------
-    // Presentation helper
-    // ------------------------------------------------------------------
+    private static final java.util.Set<String> ALLOWED_AUDIO_EXTENSIONS =
+            java.util.Set.of("m4a", "mp3", "wav", "ogg", "flac", "webm", "aac", "mp4");
+
+    /** Defense in depth: reject obviously non-audio uploads before paying for transcription. */
+    private boolean hasAllowedAudioExtension(String filename) {
+        int dot = filename.lastIndexOf('.');
+        if (dot < 0 || dot == filename.length() - 1) {
+            return false;
+        }
+        String extension = filename.substring(dot + 1).toLowerCase(java.util.Locale.ROOT);
+        return ALLOWED_AUDIO_EXTENSIONS.contains(extension);
+    }
 
     private TransactionDraftDTO toDTO(TransactionDraft draft) {
         return new TransactionDraftDTO(

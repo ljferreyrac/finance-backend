@@ -11,12 +11,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-/**
- * Wires all infrastructure persistence adapters as Spring beans.
- *
- * Kept in one place so the hexagonal boundary is explicit:
- * domain ports -> these beans -> JPA Spring Data interfaces.
- */
+// Kept in one place so the hexagonal boundary is explicit: domain ports -> these beans -> JPA Spring Data interfaces.
 @Configuration
 public class PersistenceConfig {
 

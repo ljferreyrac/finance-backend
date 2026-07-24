@@ -19,17 +19,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Orchestrates the voice-to-transactions extraction flow.
- *
- * <ol>
- *   <li>Loads the user's categories and accounts to give the AI naming context.</li>
- *   <li>Delegates text extraction to the {@link AIExtractionPort}.</li>
- *   <li>Maps raw AI output to typed {@link TransactionDraft} domain objects.</li>
- * </ol>
- *
- * No business-rule validation is applied here; the draft is returned as-is for
- * user review. Validation occurs only when the user confirms and POSTs to the
- * create-transaction endpoint.
+ * Loads the user's categories/accounts as AI naming context, delegates extraction to
+ * {@link AIExtractionPort}, and maps raw output to {@link TransactionDraft}. No business-rule
+ * validation happens here; that occurs when the user confirms via the create-transaction endpoint.
  */
 @Service
 public class ExtractTransactionsService implements ExtractTransactionsFromVoiceUseCase {
@@ -74,10 +66,6 @@ public class ExtractTransactionsService implements ExtractTransactionsFromVoiceU
                 .map(raw -> toDraft(raw, categories, accounts, tags))
                 .toList();
     }
-
-    // ------------------------------------------------------------------
-    // Private helpers
-    // ------------------------------------------------------------------
 
     private TransactionDraft toDraft(
             AITransactionRaw raw,

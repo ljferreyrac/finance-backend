@@ -8,10 +8,6 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Input port for all account management operations.
- * Implemented by the application service; invoked by the REST controller.
- */
 public interface AccountUseCase {
 
     List<Account> listAccounts(UUID userId);
@@ -41,7 +37,7 @@ public interface AccountUseCase {
             Integer closingDay,
             Integer dueDay,
             String color,
-            boolean isActive,
+            Boolean isActive,
             UUID linkedAccountId);
 
     void deleteAccount(UUID userId, UUID accountId);

@@ -9,10 +9,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Spring Data JPA interface for category persistence.
- * Named "Port" to distinguish it from the domain-facing adapter.
- */
+// Named "Port" to distinguish it from the domain-facing JpaCategoryRepository adapter.
 public interface JpaCategoryRepositoryPort extends JpaRepository<CategoryEntity, UUID> {
 
     List<CategoryEntity> findByUserIdOrderByPositionAscNameAsc(UUID userId);

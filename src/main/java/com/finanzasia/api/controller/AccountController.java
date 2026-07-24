@@ -174,8 +174,6 @@ public class AccountController {
         return toDTO(account);
     }
 
-    // --- presentation helpers ---
-
     private AccountDTO toDTO(Account account) {
         long txCount = accountRepository.countTransactionsByAccountId(account.getId());
         BigDecimal availableCredit = computeAvailableCredit(account);
@@ -198,10 +196,8 @@ public class AccountController {
     }
 
     /**
-     * Computes the remaining credit for a CREDIT_CARD account.
-     * Returns {@code creditLimit - |currentBalance|} when the limit is set,
-     * null otherwise or for non-credit accounts.
-     * currentBalance is expected to be in PEN-equivalent after exchange rate conversion.
+     * Available credit is {@code creditLimit - |currentBalance|}; null for non-credit accounts
+     * or when no limit is set. currentBalance is assumed PEN-equivalent.
      */
     private BigDecimal computeAvailableCredit(Account account) {
         if (account.getType() != AccountType.CREDIT_CARD || account.getCreditLimit() == null) {

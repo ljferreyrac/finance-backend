@@ -138,8 +138,8 @@ public class TransactionController {
                 .map(t -> toDTO(t, accountMap, categoryMap))
                 .toList();
 
-        // totalCount is the full count without cursor (uses the same filters minus cursor)
-        long totalCount = page.items().size(); // approximate; full count omitted for performance
+        // Approximate: a full count query across the same filters is skipped for performance.
+        long totalCount = page.items().size();
 
         return new PagedTransactionsDTO(dtos, page.nextCursor(), page.hasMore(), totalCount);
     }
@@ -241,8 +241,6 @@ public class TransactionController {
 
         transactionUseCase.deleteTransaction(principal.getId(), id);
     }
-
-    // --- presentation helpers ---
 
     private TransactionDTO toDTO(
             Transaction t,

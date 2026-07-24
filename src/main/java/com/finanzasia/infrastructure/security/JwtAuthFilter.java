@@ -18,9 +18,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Reads the {@code Authorization: Bearer <token>} header on every request,
- * validates the access token, and populates the security context with a
- * {@link UserPrincipal}. Parsing failures are silently swallowed so that
+ * Validates the access token from the Authorization header and populates the security
+ * context with a {@link UserPrincipal}. Parsing failures are silently swallowed so that
  * Spring Security's standard 401 path handles unauthenticated requests.
  */
 @Component

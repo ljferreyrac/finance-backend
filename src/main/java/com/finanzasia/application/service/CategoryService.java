@@ -101,7 +101,6 @@ public class CategoryService implements CategoryUseCase {
             if (reassignTo == null) {
                 throw new CategoryInUseException(categoryId, expenseCount);
             }
-            // Validate that the reassignment target also belongs to this user
             categoryRepository.findByIdAndUser(reassignTo, userId)
                     .orElseThrow(() -> new CategoryNotFoundException(reassignTo));
             categoryRepository.reassignExpenses(categoryId, reassignTo, userId);
@@ -121,12 +120,7 @@ public class CategoryService implements CategoryUseCase {
         return categoryRepository.save(category);
     }
 
-    // --- private helpers ---
-
-    /**
-     * Computes the next available position for a new category.
-     * New categories are appended after the current last position.
-     */
+    /** Appends after the current max position so existing ordering is never disturbed. */
     private int nextPosition(UUID userId) {
         List<Category> existing = categoryRepository.findAllByUser(userId);
         return existing.stream()

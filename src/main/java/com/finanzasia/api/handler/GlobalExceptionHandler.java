@@ -33,8 +33,7 @@ import java.util.stream.Collectors;
 
 /**
  * Translates domain exceptions into RFC 7807 Problem Detail responses.
- * Stack traces and internal error details are never exposed to callers
- * (reinforced by {@code server.error.include-stacktrace=never} in application.properties).
+ * Stack traces are never exposed to callers ({@code server.error.include-stacktrace=never}).
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -198,12 +197,7 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    /**
-     * Catch-all for any unhandled runtime exception.
-     * Returns a generic 500 so the real HTTP status reaches the client instead
-     * of being swallowed by Spring Boot's /error forwarding mechanism.
-     * Internal error details are never exposed to callers.
-     */
+    /** Catch-all so the real status reaches the client instead of Spring Boot's /error forwarding. */
     @ExceptionHandler(Exception.class)
     public ProblemDetail handleUnexpected(Exception ex) {
         LOG.error("Unhandled exception: {}", ex.getMessage(), ex);
@@ -213,10 +207,7 @@ public class GlobalExceptionHandler {
         return pd;
     }
 
-    /**
-     * Handles bean-validation failures and returns each field error as a
-     * structured map so clients can display per-field messages.
-     */
+    /** Returns each bean-validation failure as a structured map for per-field client messages. */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ProblemDetail handleValidationErrors(MethodArgumentNotValidException ex) {
         Map<String, String> fieldErrors = ex.getBindingResult().getFieldErrors().stream()

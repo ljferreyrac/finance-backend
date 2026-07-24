@@ -47,16 +47,9 @@ public class AccountService implements AccountUseCase {
     }
 
     /**
-     * Computes the net worth contribution for a given currency.
-     *
-     * <p>Non-credit accounts always add their balance.
-     * Credit card accounts: {@code currentBalance} is the remaining available
-     * credit, so {@code debt = creditLimit - currentBalance}.
-     *
-     * <p>When {@code includeDebt} is true the debt is subtracted
-     * ({@code currentBalance - creditLimit}), giving true net worth.
-     * When false, credit card accounts are skipped entirely so only liquid
-     * assets are counted.
+     * Credit card {@code currentBalance} stores available credit, not debt. With includeDebt
+     * true, {@code creditLimit - currentBalance} is subtracted for true net worth; when false,
+     * credit cards are skipped so only liquid assets count.
      */
     private BigDecimal computeNetWorthForCurrency(
             List<Account> accounts, String currency, boolean includeDebt) {
@@ -141,7 +134,7 @@ public class AccountService implements AccountUseCase {
             Integer closingDay,
             Integer dueDay,
             String color,
-            boolean isActive,
+            Boolean isActive,
             UUID linkedAccountId) {
 
         Account account = accountRepository.findByIdAndUser(accountId, userId)
@@ -160,7 +153,11 @@ public class AccountService implements AccountUseCase {
         account.setClosingDay(closingDay);
         account.setDueDay(dueDay);
         account.setColor(color);
-        account.setActive(isActive);
+        // Null means "no change": a partial update that omits isActive must not
+        // silently deactivate the account (primitive boolean would default to false).
+        if (isActive != null) {
+            account.setActive(isActive);
+        }
         account.setLinkedAccountId(linkedAccountId);
         account.setUpdatedAt(Instant.now());
 
@@ -193,18 +190,14 @@ public class AccountService implements AccountUseCase {
     }
 
     /**
-     * Adjusts the stored balance of an account by the given delta.
-     * A positive delta credits (adds) and a negative delta debits (subtracts).
-     * Package-private — only callable from {@code application.service} classes.
-     * Must be called inside an active {@code @Transactional} scope.
-     * Balance is never exposed as a directly writable field in any public port.
+     * Package-private, callable only from other application.service classes, and must run
+     * inside an active {@code @Transactional} scope. Balance is never a public writable field.
      */
     void adjustBalance(UUID accountId, BigDecimal delta) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
 
-        // If this account delegates its balance to a parent account (e.g. a wallet
-        // linked to a bank account), adjust the parent instead.
+        // A linked account (e.g. a wallet tied to a bank account) delegates its balance to the parent.
         UUID linkedId = account.getLinkedAccountId();
         if (linkedId != null) {
             account = accountRepository.findById(linkedId)

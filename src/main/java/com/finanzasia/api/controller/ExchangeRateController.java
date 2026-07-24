@@ -15,10 +15,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Exposes the daily USD-to-PEN exchange rate for read access.
- * The rate is system-global; it is seeded automatically on first access and
- * is not editable via this API. Users confirm their own PEN equivalent by
- * supplying {@code amountLocal} on a cross-currency transaction instead.
+ * The rate is system-global and seeded automatically on first access, not user-editable.
+ * Users confirm their own PEN equivalent via {@code amountLocal} on a cross-currency transaction.
  */
 @Tag(name = "Exchange Rates", description = "Daily USD-to-PEN exchange rate (read-only)")
 @RestController
@@ -45,8 +43,6 @@ public class ExchangeRateController {
     public ExchangeRateDTO getToday() {
         return toDTO(getTodayExchangeRateUseCase.getOrCreateDefault());
     }
-
-    // --- presentation helpers ---
 
     private ExchangeRateDTO toDTO(ExchangeRate rate) {
         return new ExchangeRateDTO(

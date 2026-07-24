@@ -72,7 +72,6 @@ public class TagEntity {
     public Instant getUpdatedAt() { return updatedAt; }
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 
-    /** Maps this JPA entity to the pure domain record. */
     public Tag toTag() {
         return new Tag(id, userId, name, color);
     }

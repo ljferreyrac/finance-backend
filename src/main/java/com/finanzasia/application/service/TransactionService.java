@@ -114,15 +114,14 @@ public class TransactionService implements TransactionUseCase {
                 null,
                 tags);
 
-        // Carry the user-supplied local amount into the domain object before the
-        // balance effect is applied so that applyBalanceEffect can use it directly.
+        // Set before the balance effect runs so applyBalanceEffect can use it directly.
         if (amountLocal != null) {
             transaction.setAmountLocal(amountLocal);
         }
 
         Transaction saved = transactionRepository.save(transaction);
         applyBalanceEffect(saved, type, accountId, fromAccountId, toAccountId, amount);
-        // Persist amountLocal / exchangeRateApplied if conversion was needed
+        // Re-save only if a conversion set amountLocal / exchangeRateApplied
         if (saved.getAmountLocal() != null) {
             transactionRepository.save(saved);
         }
@@ -149,26 +148,23 @@ public class TransactionService implements TransactionUseCase {
         Transaction existing = transactionRepository.findByIdAndUser(transactionId, userId)
                 .orElseThrow(() -> new TransactionNotFoundException(transactionId));
 
-        // Compute merged state FIRST, then validate ownership against it.
-        // This ensures the values used in applyBalanceEffect are the same ones
-        // that were ownership-checked — prevents cross-user account substitution.
+        // Merge first, then validate ownership against the merged values, not the raw inputs,
+        // so a request cannot substitute another user's account/category after the check.
         UUID mergedAccountId     = (accountId != null)     ? accountId     : existing.getAccountId();
         UUID mergedFromAccountId = (fromAccountId != null) ? fromAccountId : existing.getFromAccountId();
         UUID mergedToAccountId   = (toAccountId != null)   ? toAccountId   : existing.getToAccountId();
-        // null categoryId on update means "keep existing" — EXPENSE must always have a category
+        // null categoryId means "keep existing"; EXPENSE must always end up with one
         UUID mergedCategoryId    = (categoryId != null)    ? categoryId    : existing.getCategoryId();
 
         validateOwnership(userId, existing.getType(),
                 mergedAccountId, mergedFromAccountId, mergedToAccountId, mergedCategoryId);
 
-        // Guard: EXPENSE must retain a category after the merge
         if (existing.isExpense() && mergedCategoryId == null) {
             throw new InvalidTransactionException("categoryId is required for EXPENSE transactions");
         }
 
-        // Reverse the old balance effect before applying the new one.
-        // Use amountLocal when available so the reversal mirrors the exact PEN amount
-        // that was originally applied, regardless of today's rate.
+        // Reverse before applying the new effect; uses the stored amountLocal so the reversal
+        // mirrors the exact PEN amount originally applied, regardless of today's rate.
         reverseBalanceEffect(
                 existing.getType(),
                 existing.getAccountId(),
@@ -195,11 +191,9 @@ public class TransactionService implements TransactionUseCase {
             existing.setTags(tags);
         }
 
-        // Clear any previously stored conversion fields before recomputing
         existing.setAmountLocal(null);
         existing.setExchangeRateApplied(null);
 
-        // Carry the user-supplied local amount for the new balance calculation
         if (amountLocal != null) {
             existing.setAmountLocal(amountLocal);
         }
@@ -212,7 +206,7 @@ public class TransactionService implements TransactionUseCase {
                 saved.getFromAccountId(),
                 saved.getToAccountId(),
                 saved.getAmount());
-        // Persist updated amountLocal / exchangeRateApplied if conversion was needed
+        // Re-save only if a conversion set amountLocal / exchangeRateApplied
         if (saved.getAmountLocal() != null) {
             transactionRepository.save(saved);
         }
@@ -236,10 +230,6 @@ public class TransactionService implements TransactionUseCase {
                 transaction.getAmountLocal(),
                 transaction.getExchangeRateApplied());
     }
-
-    // ------------------------------------------------------------------
-    // Private helpers
-    // ------------------------------------------------------------------
 
     private void validateOwnership(
             UUID userId,
@@ -281,11 +271,8 @@ public class TransactionService implements TransactionUseCase {
     }
 
     /**
-     * Applies the balance change for a committed transaction.
-     * When the transaction currency differs from the account currency, the sell
-     * rate from today's exchange rate is used to convert the amount, and the
-     * applied rate is stored on the transaction so that a future reversal uses
-     * the exact same value.
+     * On a currency mismatch, converts via today's sell rate and stores the applied rate on the
+     * transaction so a future reversal uses the exact same value.
      */
     private void applyBalanceEffect(
             Transaction transaction,
@@ -306,9 +293,7 @@ public class TransactionService implements TransactionUseCase {
             }
             case TRANSFER -> {
                 accountService.adjustBalance(fromAccountId, amount.negate());
-                // For cross-currency transfers, credit the user-supplied received amount
-                // (stored in amountLocal) to the destination account. Fall back to the
-                // sent amount when currencies match (amountLocal will be null).
+                // Cross-currency: credit the user-confirmed received amount (amountLocal); same-currency it's null, use amount.
                 BigDecimal toAmount = (transaction.getAmountLocal() != null)
                         ? transaction.getAmountLocal()
                         : amount;
@@ -318,11 +303,8 @@ public class TransactionService implements TransactionUseCase {
     }
 
     /**
-     * Reverses a previously applied balance change.
-     * Prefers {@code storedAmountLocal} (the exact PEN amount that was applied) when
-     * non-null so that the reversal is perfectly symmetric. Falls back to reconstructing
-     * the amount via {@code storedRate} for rows persisted before {@code amount_local} was
-     * added. For same-currency transactions both will be null and the original amount is used.
+     * Prefers {@code storedAmountLocal} for a symmetric reversal; falls back to reconstructing
+     * via {@code storedRate} for rows persisted before {@code amount_local} existed.
      */
     private void reverseBalanceEffect(
             TransactionType type,
@@ -344,9 +326,7 @@ public class TransactionService implements TransactionUseCase {
             }
             case TRANSFER -> {
                 accountService.adjustBalance(fromAccountId, amount);
-                // Mirror the exact amount that was credited during applyBalanceEffect.
-                // For cross-currency transfers storedAmountLocal is the received amount;
-                // for same-currency transfers it is null and we use the original amount.
+                // Mirrors the amount originally credited in applyBalanceEffect.
                 BigDecimal toAmount = (storedAmountLocal != null) ? storedAmountLocal : amount;
                 accountService.adjustBalance(toAccountId, toAmount.negate());
             }
@@ -369,22 +349,15 @@ public class TransactionService implements TransactionUseCase {
     }
 
     /**
-     * Returns the amount in the account's currency for balance effect purposes.
-     *
-     * <p>Resolution order for cross-currency transactions:
-     * <ol>
-     *   <li>If {@code transaction.amountLocal} is already set (user-confirmed value), use it
-     *       directly and compute {@code exchangeRateApplied = amountLocal / amount}.</li>
-     *   <li>Otherwise, fall back to today's sell rate, set both {@code amountLocal} and
-     *       {@code exchangeRateApplied} on the transaction for audit and future reversal.</li>
-     * </ol>
-     * When currencies match, neither field is modified and the original amount is returned.
+     * Cross-currency resolution order: use {@code transaction.amountLocal} if already
+     * user-confirmed (deriving the rate from it), otherwise fall back to today's sell rate and
+     * store both fields for audit/reversal. Same-currency: original amount, fields untouched.
      */
     private BigDecimal convertIfNeeded(Transaction transaction, UUID accountId, BigDecimal amount) {
         Account account = accountRepository.findById(accountId)
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
 
-        // Follow linkedAccountId to the actual balance holder (same as adjustBalance does)
+        // Must match adjustBalance's own linkedAccountId resolution to stay consistent.
         if (account.getLinkedAccountId() != null) {
             UUID linkedId = account.getLinkedAccountId();
             account = accountRepository.findById(linkedId)
@@ -392,11 +365,9 @@ public class TransactionService implements TransactionUseCase {
         }
 
         if (transaction.getCurrency().equals(account.getCurrency())) {
-            // Same currency: no conversion fields needed
             return amount;
         }
 
-        // Cross-currency: use user-supplied amountLocal when available
         if (transaction.getAmountLocal() != null) {
             BigDecimal local = transaction.getAmountLocal();
             BigDecimal rate = local.divide(amount, 4, java.math.RoundingMode.HALF_UP);
@@ -404,7 +375,6 @@ public class TransactionService implements TransactionUseCase {
             return local;
         }
 
-        // Auto-convert using today's sell rate
         ExchangeRate rate = getTodayExchangeRateUseCase.getOrCreateDefault();
         BigDecimal converted = rate.toAccountCurrency(amount);
         transaction.setAmountLocal(converted);
@@ -423,7 +393,6 @@ public class TransactionService implements TransactionUseCase {
         Set<UUID> uniqueIds = new HashSet<>(tagIds);
         List<Tag> found = tagRepository.findByIdsAndUserId(uniqueIds, userId);
         if (found.size() != uniqueIds.size()) {
-            // At least one ID is unknown or belongs to a different user
             Set<UUID> foundIds = new HashSet<>();
             for (Tag t : found) {
                 foundIds.add(t.id());

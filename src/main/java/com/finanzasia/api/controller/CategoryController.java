@@ -159,8 +159,6 @@ public class CategoryController {
         return toDTO(category);
     }
 
-    // --- presentation helpers ---
-
     private CategoryDTO toDTO(Category category) {
         long expenseCount = categoryRepository.countExpensesByCategory(category.getId());
         return new CategoryDTO(

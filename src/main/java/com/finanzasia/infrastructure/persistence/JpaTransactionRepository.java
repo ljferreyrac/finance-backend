@@ -16,12 +16,7 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Adapter that implements the domain {@link TransactionRepository} output port
- * using Spring Data JPA with cursor-based (keyset) pagination.
- *
- * Cursor format: Base64(transactionDate:uuid) so it is opaque to callers.
- */
+// Uses cursor-based (keyset) pagination. Cursor format is Base64(transactionDate:uuid), opaque to callers.
 public class JpaTransactionRepository implements TransactionRepository {
 
     private final JpaTransactionRepositoryPort jpaPort;
@@ -103,16 +98,12 @@ public class JpaTransactionRepository implements TransactionRepository {
             entity = TransactionEntity.fromDomain(transaction);
         }
 
-        // Apply domain tag list to the entity's managed collection
         applyTags(entity, transaction.getTags());
 
         return jpaPort.save(entity).toDomain();
     }
 
-    /**
-     * Replaces the entity's tag collection with managed {@link TagEntity} instances
-     * loaded by their IDs so that the join table is updated correctly.
-     */
+    // Tags must be managed TagEntity instances loaded by ID for the join table to update correctly.
     private void applyTags(TransactionEntity entity, List<Tag> domainTags) {
         if (domainTags == null || domainTags.isEmpty()) {
             entity.getTags().clear();
@@ -132,23 +123,13 @@ public class JpaTransactionRepository implements TransactionRepository {
         jpaPort.softDelete(transactionId, now);
     }
 
-    // ------------------------------------------------------------------
-    // Cursor helpers
-    // ------------------------------------------------------------------
-
-    /**
-     * Encodes a cursor as Base64 of "date:uuid" so it is opaque to API callers.
-     */
     public static String encodeCursor(LocalDate date, UUID id) {
         String raw = date.toString() + ":" + id.toString();
         return Base64.getUrlEncoder().withoutPadding()
                 .encodeToString(raw.getBytes(StandardCharsets.UTF_8));
     }
 
-    /**
-     * Decodes a cursor back into its date and UUID components.
-     * Returns null if the cursor is null or malformed (treated as "no cursor").
-     */
+    // Returns null if the cursor is null or malformed, treated as "no cursor".
     public static CursorParts decodeCursor(String cursor) {
         if (cursor == null || cursor.isBlank()) {
             return null;

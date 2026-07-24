@@ -10,10 +10,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
-/**
- * Input port for all transaction operations.
- * Implemented by the application service; invoked by the REST controller.
- */
 public interface TransactionUseCase {
 
     TransactionPage listTransactions(TransactionFilter filter);

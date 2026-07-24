@@ -6,10 +6,6 @@ import com.finanzasia.domain.port.out.UserRepository;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Persistence adapter that implements the domain {@link UserRepository} port
- * by delegating to the Spring Data JPA interface.
- */
 public class JpaUserRepository implements UserRepository {
 
     private final JpaUserRepositoryPort jpaPort;

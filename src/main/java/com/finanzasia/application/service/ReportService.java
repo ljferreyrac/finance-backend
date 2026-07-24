@@ -15,13 +15,9 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Orchestrates both monthly and yearly report use cases.
- * All aggregation queries are delegated to {@link ReportRepository}.
- * Business logic such as percentage calculation, trend detection, and
- * previous-period comparison lives exclusively in this class.
- *
- * Category names are returned directly from the SQL query (joined from the
- * categories table) so no static label mapping is needed here.
+ * Aggregation queries are delegated to {@link ReportRepository}; percentage calculation, trend
+ * detection, and previous-period comparison live exclusively here. Category names come straight
+ * from the SQL join, so no static label mapping is needed.
  */
 @Service
 public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUseCase {
@@ -35,10 +31,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         this.reportRepository = reportRepository;
     }
 
-    // ------------------------------------------------------------------
-    // Monthly report
-    // ------------------------------------------------------------------
-
     @Override
     public MonthlyReport getMonthlyReport(UUID userId, int year, int month, String currency,
                                           UUID accountId, UUID categoryId, UUID tagId) {
@@ -47,14 +39,12 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                 reportRepository.sumByMonth(userId, year, month, currency, accountId, categoryId, tagId));
         long count = reportRepository.countByMonth(userId, year, month, currency, accountId, categoryId, tagId);
 
-        // Daily average: total / days in month
         int daysInMonth = YearMonth.of(year, month).lengthOfMonth();
         BigDecimal dailyAverage = count == 0
                 ? ZERO
                 : total.divide(BigDecimal.valueOf(daysInMonth), 2, RoundingMode.HALF_UP);
 
-        // Previous month (handles January -> December of prior year).
-        // Filters are forwarded so the comparison is apples-to-apples.
+        // Wraps January back to December of the prior year; same filters are reused for an apples-to-apples comparison.
         int prevYear  = (month == 1) ? year - 1 : year;
         int prevMonth = (month == 1) ? 12 : month - 1;
         BigDecimal prevTotal = nullSafe(
@@ -62,7 +52,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
 
         MonthlyReport.VsLastMonth vsLastMonth = buildVsLastMonth(total, prevTotal);
 
-        // Income summary
         BigDecimal incomeTotal = nullSafe(
                 reportRepository.sumIncomeByMonth(userId, year, month, currency, accountId, categoryId, tagId));
         long incomeCount = reportRepository.countIncomeByMonth(
@@ -70,7 +59,7 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         MonthlyReport.IncomeSummary incomeSummary =
                 new MonthlyReport.IncomeSummary(incomeTotal, incomeCount, currency);
 
-        // Category breakdown: getCategory() returns the human-readable name from the JOIN
+        // row.getCategory() is reused as both the category key and its label since the JOIN already returns the human-readable name.
         List<MonthlyReport.CategoryBreakdown> byCategory =
                 reportRepository.categoryBreakdownByMonth(userId, year, month, currency, accountId, categoryId, tagId)
                         .stream()
@@ -82,7 +71,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                                 computePercentage(row.getAmount(), total)))
                         .toList();
 
-        // Week breakdown
         List<MonthlyReport.WeekBreakdown> byWeek =
                 reportRepository.weekBreakdownByMonth(userId, year, month, currency, accountId, categoryId, tagId)
                         .stream()
@@ -93,7 +81,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                                 row.getCount()))
                         .toList();
 
-        // Top merchants
         List<MonthlyReport.MerchantSummary> topMerchants =
                 reportRepository.topMerchantsByMonth(userId, year, month, currency, accountId, categoryId, tagId)
                         .stream()
@@ -110,10 +97,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         return new MonthlyReport(period, summary, incomeSummary, vsLastMonth, byCategory, byWeek, topMerchants);
     }
 
-    // ------------------------------------------------------------------
-    // Yearly report
-    // ------------------------------------------------------------------
-
     @Override
     public YearlyReport getYearlyReport(UUID userId, int year, String currency,
                                         UUID accountId, UUID categoryId, UUID tagId) {
@@ -127,7 +110,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         YearlyReport.YearlySummary summary = new YearlyReport.YearlySummary(
                 total, currency, count, monthlyAverage);
 
-        // Income summary
         BigDecimal incomeTotal = nullSafe(
                 reportRepository.sumIncomeByYear(userId, year, currency, accountId, categoryId, tagId));
         long incomeCount = reportRepository.countIncomeByYear(
@@ -135,7 +117,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         YearlyReport.IncomeSummary incomeSummary =
                 new YearlyReport.IncomeSummary(incomeTotal, incomeCount, currency);
 
-        // Month breakdown
         List<YearlyReport.MonthBreakdown> byMonth =
                 reportRepository.monthBreakdownByYear(userId, year, currency, accountId, categoryId, tagId)
                         .stream()
@@ -146,7 +127,7 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                                 row.getCount()))
                         .toList();
 
-        // Category breakdown: getCategory() returns the human-readable name from the JOIN
+        // row.getCategory() is reused as both the category key and its label since the JOIN already returns the human-readable name.
         List<YearlyReport.CategoryBreakdown> byCategory =
                 reportRepository.categoryBreakdownByYear(userId, year, currency, accountId, categoryId, tagId)
                         .stream()
@@ -158,7 +139,6 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                                 computePercentage(row.getAmount(), total)))
                         .toList();
 
-        // Top merchants
         List<YearlyReport.MerchantSummary> topMerchants =
                 reportRepository.topMerchantsByYear(userId, year, currency, accountId, categoryId, tagId)
                         .stream()
@@ -171,18 +151,11 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         return new YearlyReport(year, summary, incomeSummary, byMonth, byCategory, topMerchants, highlights);
     }
 
-    // ------------------------------------------------------------------
-    // Private helpers
-    // ------------------------------------------------------------------
-
     private BigDecimal nullSafe(BigDecimal value) {
         return value != null ? value.setScale(2, RoundingMode.HALF_UP) : ZERO;
     }
 
-    /**
-     * Computes amount / total * 100 rounded to one decimal.
-     * Returns 0.0 when total is zero to avoid division-by-zero.
-     */
+    /** Returns 0.0 when total is zero to avoid division-by-zero. */
     private double computePercentage(BigDecimal amount, BigDecimal total) {
         if (total.compareTo(BigDecimal.ZERO) == 0) {
             return 0.0;
@@ -212,11 +185,7 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         return new MonthlyReport.VsLastMonth(previous, change, changePercent, trend);
     }
 
-    /**
-     * Builds highlight data from the already-computed breakdown lists.
-     * Peak and lowest are derived from months with data.
-     * Top category is the first entry (list is already ordered by amount DESC from SQL).
-     */
+    /** Top category is just the first entry since the list already arrives sorted by amount DESC from SQL. */
     private YearlyReport.Highlights buildHighlights(
             List<YearlyReport.MonthBreakdown> byMonth,
             List<YearlyReport.CategoryBreakdown> byCategory) {

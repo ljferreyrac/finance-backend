@@ -4,9 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 
 import java.util.UUID;
 
-/**
- * Compact category reference embedded inside an expense response.
- */
 @Schema(description = "Compact category reference embedded inside an expense response")
 public record CategorySummaryDTO(
 

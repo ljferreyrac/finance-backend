@@ -7,10 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Adapter that implements the domain {@link AccountRepository} output port
- * using Spring Data JPA.
- */
 public class JpaAccountRepository implements AccountRepository {
 
     private final JpaAccountRepositoryPort jpaPort;

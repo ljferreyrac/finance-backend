@@ -7,7 +7,6 @@ import java.time.LocalDate;
 import java.util.UUID;
 
 /**
- * Pure domain entity representing the daily exchange rate for a currency pair.
  * The sell rate is used for expense conversion because that is the price the
  * user pays when the bank converts their soles to dollars (or vice versa).
  * No JPA or framework annotations are allowed here.
@@ -61,11 +60,6 @@ public final class ExchangeRate {
     public void setUpdatedAt(Instant updatedAt) { this.updatedAt = updatedAt; }
 
     /**
-     * Converts an amount expressed in {@code currencyFrom} to {@code currencyTo}
-     * using the sell rate. The sell rate is the price the bank charges when a
-     * customer buys foreign currency, so it is the correct rate to use for
-     * expense recording: the user effectively pays the bank's sell price.
-     *
      * @param amount a positive value in the source currency
      * @return the equivalent amount in the target currency, rounded to 2 decimal places
      */

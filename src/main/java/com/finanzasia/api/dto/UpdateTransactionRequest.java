@@ -2,6 +2,7 @@ package com.finanzasia.api.dto;
 
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
@@ -20,6 +21,7 @@ public record UpdateTransactionRequest(
 
         @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
         @DecimalMax(value = "9999999.99", message = "amount must not exceed 9999999.99")
+        @Digits(integer = 7, fraction = 2, message = "amount must have at most 2 decimal places")
         BigDecimal amount,
 
         @Pattern(regexp = "^(PEN|USD)$", message = "currency must be PEN or USD")
@@ -48,5 +50,6 @@ public record UpdateTransactionRequest(
          */
         @DecimalMin(value = "0.01", message = "amountLocal must be at least 0.01")
         @DecimalMax(value = "9999999.99", message = "amountLocal must not exceed 9999999.99")
+        @Digits(integer = 7, fraction = 2, message = "amountLocal must have at most 2 decimal places")
         BigDecimal amountLocal
 ) {}

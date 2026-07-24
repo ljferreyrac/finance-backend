@@ -4,7 +4,6 @@ import java.time.Instant;
 import java.util.UUID;
 
 /**
- * Pure domain entity representing a user-defined expense category.
  * No JPA or framework annotations are allowed here.
  */
 public final class Category {
@@ -50,12 +49,10 @@ public final class Category {
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
 
-    /** Returns true when this category is owned by the given user. */
     public boolean belongsTo(UUID ownerId) {
         return userId.equals(ownerId);
     }
 
-    /** Sets this category as the default, updating the timestamp. */
     public void markAsDefault(Instant now) {
         this.isDefault = true;
         this.updatedAt = now;

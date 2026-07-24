@@ -10,10 +10,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-/**
- * Spring Data JPA interface for account persistence.
- * Named "Port" to distinguish it from the domain-facing adapter.
- */
+// Named "Port" to distinguish it from the domain-facing JpaAccountRepository adapter.
 public interface JpaAccountRepositoryPort extends JpaRepository<AccountEntity, UUID> {
 
     List<AccountEntity> findByUserIdOrderByCreatedAtAsc(UUID userId);

@@ -77,11 +77,6 @@ public record YearlyReportDTO(
             CategoryBreakdown topCategory
     ) {}
 
-    // ------------------------------------------------------------------
-    // Factory
-    // ------------------------------------------------------------------
-
-    /** Converts a domain {@link YearlyReport} to its API representation. */
     public static YearlyReportDTO from(YearlyReport report) {
         YearlySummary summary = new YearlySummary(
                 report.summary().totalAmount(),

@@ -8,9 +8,6 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
-/**
- * Adapter that implements the domain {@link TagRepository} output port using Spring Data JPA.
- */
 public class JpaTagRepository implements TagRepository {
 
     private final JpaTagRepositoryPort jpaPort;

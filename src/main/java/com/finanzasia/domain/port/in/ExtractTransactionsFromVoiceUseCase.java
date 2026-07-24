@@ -6,9 +6,8 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Input port for the voice-to-transactions extraction feature.
- * Implementations orchestrate loading user context, calling the AI backend,
- * and mapping raw AI output to typed domain drafts ready for user review.
+ * Orchestrates loading user context, calling the AI backend, and mapping raw
+ * AI output to typed domain drafts ready for user review.
  */
 public interface ExtractTransactionsFromVoiceUseCase {
 

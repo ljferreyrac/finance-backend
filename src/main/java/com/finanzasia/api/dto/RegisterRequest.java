@@ -13,8 +13,8 @@ public record RegisterRequest(
         @NotBlank @Email
         String email,
 
-        @Schema(description = "Password (8-100 characters)", example = "MiContrasena123")
-        @NotBlank @Size(min = 8, max = 100)
+        @Schema(description = "Password (10-100 characters)", example = "MiContrasena123")
+        @NotBlank @Size(min = 10, max = 100)
         String password,
 
         @Schema(description = "User's full name", example = "Juan Perez")

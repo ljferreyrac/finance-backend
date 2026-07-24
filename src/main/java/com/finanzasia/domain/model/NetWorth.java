@@ -4,8 +4,7 @@ import java.math.BigDecimal;
 import java.util.List;
 
 /**
- * Immutable snapshot of a user's net worth across all active accounts,
- * with totals separated by currency.
+ * Only active accounts are included; totals are kept separate per currency.
  */
 public record NetWorth(
         BigDecimal totalPEN,

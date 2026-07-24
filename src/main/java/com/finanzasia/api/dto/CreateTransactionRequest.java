@@ -3,6 +3,7 @@ package com.finanzasia.api.dto;
 import com.finanzasia.domain.model.TransactionType;
 import jakarta.validation.constraints.DecimalMax;
 import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
@@ -22,6 +23,7 @@ public record CreateTransactionRequest(
         @NotNull
         @DecimalMin(value = "0.01", message = "amount must be at least 0.01")
         @DecimalMax(value = "9999999.99", message = "amount must not exceed 9999999.99")
+        @Digits(integer = 7, fraction = 2, message = "amount must have at most 2 decimal places")
         BigDecimal amount,
 
         @NotBlank
@@ -54,13 +56,12 @@ public record CreateTransactionRequest(
         List<UUID> tagIds,
 
         /**
-         * User-confirmed PEN equivalent for cross-currency transactions (e.g. a USD charge on a
-         * PEN account). The mobile pre-fills this from the auto-calculated value (amount * sell rate)
-         * but the user may edit it to match their actual bank charge before confirming.
-         * Null for same-currency transactions or when the auto-calculated value is accepted.
+         * User-confirmed PEN equivalent for cross-currency transactions, overriding the
+         * auto-calculated amount * sell rate. Null when same-currency or auto-value is accepted.
          */
         @DecimalMin(value = "0.01", message = "amountLocal must be at least 0.01")
         @DecimalMax(value = "9999999.99", message = "amountLocal must not exceed 9999999.99")
+        @Digits(integer = 7, fraction = 2, message = "amountLocal must have at most 2 decimal places")
         BigDecimal amountLocal
 ) {
     public CreateTransactionRequest {

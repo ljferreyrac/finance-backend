@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.UUID;
 
 /**
- * Pure domain entity representing a financial transaction.
  * Covers expenses, income, and account-to-account transfers.
  * No JPA or framework annotations are allowed here.
  */
@@ -32,12 +31,12 @@ public final class Transaction {
     private Instant deletedAt;
     private List<Tag> tags;
     /**
-     * The confirmed amount in the account's primary currency (PEN) for cross-currency transactions.
-     * The user may override the auto-calculated value before saving. Null when currencies match.
+     * Confirmed amount in the account's primary currency (PEN) for cross-currency transactions;
+     * the user may override the auto-calculated value before saving. Null when currencies match.
      */
     private BigDecimal amountLocal;
 
-    /** Effective rate (amountLocal / amount) stored for audit. Null when currencies match. */
+    /** Effective rate (amountLocal / amount), kept for audit. Null when currencies match. */
     private BigDecimal exchangeRateApplied;
 
     public Transaction(
@@ -109,10 +108,7 @@ public final class Transaction {
                 createdAt, updatedAt, deletedAt, tags, exchangeRateApplied, null);
     }
 
-    /**
-     * Full constructor. Prefer narrower constructors when {@code amountLocal} and
-     * {@code exchangeRateApplied} are not yet known (e.g., before the balance effect is applied).
-     */
+    /** Prefer narrower constructors when {@code amountLocal}/{@code exchangeRateApplied} are not yet known. */
     public Transaction(
             UUID id,
             UUID userId,
@@ -171,17 +167,15 @@ public final class Transaction {
     public Instant getUpdatedAt() { return updatedAt; }
     public Instant getDeletedAt() { return deletedAt; }
 
-    /** Returns true when this transaction is owned by the given user. */
     public boolean belongsTo(UUID ownerId) {
         return userId.equals(ownerId);
     }
 
-    /** Returns true when this transaction has been soft-deleted. */
+    /** True once the transaction has been soft-deleted (deletedAt set), never hard-removed. */
     public boolean isDeleted() {
         return deletedAt != null;
     }
 
-    /** Marks this transaction as deleted at the given instant. */
     public void softDelete(Instant now) {
         this.deletedAt = now;
         this.updatedAt = now;
