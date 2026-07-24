@@ -293,7 +293,8 @@ public class TransactionService implements TransactionUseCase {
             }
             case TRANSFER -> {
                 accountService.adjustBalance(fromAccountId, amount.negate());
-                // Cross-currency: credit the confirmed received amount (amountLocal); null when same-currency, use amount.
+                // Cross-currency: credit the confirmed received amount (amountLocal).
+                // Same-currency: amountLocal is null, so use amount.
                 BigDecimal toAmount = (transaction.getAmountLocal() != null)
                         ? transaction.getAmountLocal()
                         : amount;
