@@ -1,6 +1,5 @@
 package com.finanzasia.domain.port.in;
 
-import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.AccountDetail;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.NetWorth;

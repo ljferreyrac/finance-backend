@@ -1,6 +1,5 @@
 package com.finanzasia.domain.port.in;
 
-import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.CategoryDetail;
 
 import java.util.List;

@@ -12,12 +12,11 @@ import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.Transaction;
 import com.finanzasia.domain.model.TransactionCursor;
+import com.finanzasia.domain.model.TransactionDetail;
+import com.finanzasia.domain.model.TransactionDetailPage;
 import com.finanzasia.domain.model.TransactionFilter;
-import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.port.in.TransactionUseCase;
-import com.finanzasia.domain.port.out.AccountRepository;
-import com.finanzasia.domain.port.out.CategoryRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,12 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
 import java.util.UUID;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
 @Tag(name = "Transactions", description = "Log and manage expenses, income, and account transfers")
 @RestController
@@ -60,16 +54,9 @@ public class TransactionController {
     private static final int MAX_LIMIT = 100;
 
     private final TransactionUseCase transactionUseCase;
-    private final AccountRepository accountRepository;
-    private final CategoryRepository categoryRepository;
 
-    public TransactionController(
-            TransactionUseCase transactionUseCase,
-            AccountRepository accountRepository,
-            CategoryRepository categoryRepository) {
+    public TransactionController(TransactionUseCase transactionUseCase) {
         this.transactionUseCase = transactionUseCase;
-        this.accountRepository = accountRepository;
-        this.categoryRepository = categoryRepository;
     }
 
     @Operation(summary = "List transactions",
@@ -110,31 +97,10 @@ public class TransactionController {
                 cursorParts != null ? cursorParts.id() : null,
                 safeLimit);
 
-        TransactionPage page = transactionUseCase.listTransactions(filter);
-
-        List<UUID> accountIds = page.items().stream()
-                .flatMap(t -> java.util.stream.Stream.of(t.getAccountId(), t.getFromAccountId(), t.getToAccountId()))
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet())
-                .stream().toList();
-
-        Map<UUID, Account> accountMap = accountRepository.findAllByUser(principal.getId())
-                .stream()
-                .filter(a -> accountIds.contains(a.getId()))
-                .collect(Collectors.toMap(Account::getId, Function.identity()));
-
-        Set<UUID> categoryIds = page.items().stream()
-                .map(Transaction::getCategoryId)
-                .filter(Objects::nonNull)
-                .collect(Collectors.toSet());
-
-        Map<UUID, Category> categoryMap = categoryRepository.findAllByUser(principal.getId())
-                .stream()
-                .filter(c -> categoryIds.contains(c.getId()))
-                .collect(Collectors.toMap(Category::getId, Function.identity()));
+        TransactionDetailPage page = transactionUseCase.listTransactions(filter);
 
         List<TransactionDTO> dtos = page.items().stream()
-                .map(t -> toDTO(t, accountMap, categoryMap))
+                .map(this::toDTO)
                 .toList();
 
         // Approximate: a full count query across the same filters is skipped for performance.
@@ -158,7 +124,7 @@ public class TransactionController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateTransactionRequest request) {
 
-        Transaction transaction = transactionUseCase.createTransaction(
+        TransactionDetail transaction = transactionUseCase.createTransaction(
                 principal.getId(),
                 request.type(),
                 request.amount(),
@@ -173,7 +139,7 @@ public class TransactionController {
                 request.tagIds(),
                 request.amountLocal());
 
-        return toDTO(transaction, loadAccountMap(principal.getId()), loadCategoryMap(principal.getId()));
+        return toDTO(transaction);
     }
 
     @Operation(summary = "Get transaction", description = "Returns a single transaction by ID.")
@@ -188,8 +154,8 @@ public class TransactionController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Transaction UUID") @PathVariable UUID id) {
 
-        Transaction transaction = transactionUseCase.getTransaction(principal.getId(), id);
-        return toDTO(transaction, loadAccountMap(principal.getId()), loadCategoryMap(principal.getId()));
+        TransactionDetail transaction = transactionUseCase.getTransaction(principal.getId(), id);
+        return toDTO(transaction);
     }
 
     @Operation(summary = "Update transaction",
@@ -207,7 +173,7 @@ public class TransactionController {
             @Parameter(description = "Transaction UUID") @PathVariable UUID id,
             @Valid @RequestBody UpdateTransactionRequest request) {
 
-        Transaction transaction = transactionUseCase.updateTransaction(
+        TransactionDetail transaction = transactionUseCase.updateTransaction(
                 principal.getId(),
                 id,
                 request.amount(),
@@ -222,7 +188,7 @@ public class TransactionController {
                 request.tagIds(),
                 request.amountLocal());
 
-        return toDTO(transaction, loadAccountMap(principal.getId()), loadCategoryMap(principal.getId()));
+        return toDTO(transaction);
     }
 
     @Operation(summary = "Delete transaction",
@@ -241,24 +207,8 @@ public class TransactionController {
         transactionUseCase.deleteTransaction(principal.getId(), id);
     }
 
-    private TransactionDTO toDTO(
-            Transaction t,
-            Map<UUID, Account> accountMap,
-            Map<UUID, Category> categoryMap) {
-
-        AccountSummaryDTO account = t.getAccountId() != null
-                ? toAccountSummary(accountMap.get(t.getAccountId()))
-                : null;
-        AccountSummaryDTO fromAccount = t.getFromAccountId() != null
-                ? toAccountSummary(accountMap.get(t.getFromAccountId()))
-                : null;
-        AccountSummaryDTO toAccount = t.getToAccountId() != null
-                ? toAccountSummary(accountMap.get(t.getToAccountId()))
-                : null;
-
-        CategorySummaryDTO category = t.getCategoryId() != null
-                ? toCategorySummary(categoryMap.get(t.getCategoryId()))
-                : null;
+    private TransactionDTO toDTO(TransactionDetail detail) {
+        Transaction t = detail.transaction();
 
         List<TagDTO> tags = t.getTags() != null
                 ? t.getTags().stream().map(this::toTagDTO).toList()
@@ -269,10 +219,10 @@ public class TransactionController {
                 t.getType(),
                 t.getAmount(),
                 t.getCurrency(),
-                account,
-                fromAccount,
-                toAccount,
-                category,
+                toAccountSummary(detail.account()),
+                toAccountSummary(detail.fromAccount()),
+                toAccountSummary(detail.toAccount()),
+                toCategorySummary(detail.category()),
                 t.getMerchant(),
                 t.getDescription(),
                 t.getTransactionDate(),
@@ -292,17 +242,6 @@ public class TransactionController {
         return new CategorySummaryDTO(category.getId(), category.getName(), category.getColor(), category.getIcon());
     }
 
-    private Map<UUID, Account> loadAccountMap(UUID userId) {
-        return accountRepository.findAllByUser(userId)
-                .stream()
-                .collect(Collectors.toMap(Account::getId, Function.identity()));
-    }
-
-    private Map<UUID, Category> loadCategoryMap(UUID userId) {
-        return categoryRepository.findAllByUser(userId)
-                .stream()
-                .collect(Collectors.toMap(Category::getId, Function.identity()));
-    }
 
     private TagDTO toTagDTO(com.finanzasia.domain.model.Tag tag) {
         return new TagDTO(tag.id(), tag.name(), tag.color());
