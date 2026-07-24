@@ -1,5 +1,6 @@
 package com.finanzasia.domain.port.out;
 
+import com.finanzasia.domain.model.AuthenticatedUser;
 import com.finanzasia.domain.model.User;
 
 import java.time.Duration;
@@ -29,6 +30,14 @@ public interface TokenProvider {
 
     /** Extracts the subject claim as the user id. */
     UUID extractUserId(String token);
+
+    /**
+     * Validates an access token and returns the caller it identifies.
+     *
+     * @throws com.finanzasia.domain.exceptions.InvalidTokenException if the
+     *         token is not valid
+     */
+    AuthenticatedUser parseAccessToken(String token);
 
     /** How long an issued refresh token stays valid; used as the store TTL. */
     Duration refreshTokenDuration();

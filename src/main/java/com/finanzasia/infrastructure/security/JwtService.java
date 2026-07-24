@@ -1,6 +1,7 @@
 package com.finanzasia.infrastructure.security;
 
 import com.finanzasia.domain.exceptions.InvalidTokenException;
+import com.finanzasia.domain.model.AuthenticatedUser;
 import com.finanzasia.domain.model.User;
 import com.finanzasia.domain.port.out.TokenProvider;
 import io.jsonwebtoken.Claims;
@@ -92,6 +93,14 @@ public class JwtService implements TokenProvider {
     @Override
     public String extractJti(String token) {
         return parseToken(token).getId();
+    }
+
+    @Override
+    public AuthenticatedUser parseAccessToken(String token) {
+        Claims claims = parseToken(token);
+        return new AuthenticatedUser(
+                UUID.fromString(claims.getSubject()),
+                claims.get("email", String.class));
     }
 
     /** @throws InvalidTokenException if the token cannot be parsed or sub is missing */

@@ -4,7 +4,9 @@ import com.finanzasia.domain.exceptions.InvalidCredentialsException;
 import com.finanzasia.domain.exceptions.InvalidTokenException;
 import com.finanzasia.domain.exceptions.UserAlreadyExistsException;
 import com.finanzasia.domain.model.AuthTokens;
+import com.finanzasia.domain.model.AuthenticatedUser;
 import com.finanzasia.domain.model.User;
+import com.finanzasia.domain.port.in.AuthenticateAccessTokenUseCase;
 import com.finanzasia.domain.port.in.LoginUseCase;
 import com.finanzasia.domain.port.in.LogoutUseCase;
 import com.finanzasia.domain.port.in.RefreshTokenUseCase;
@@ -16,6 +18,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 /**
@@ -24,7 +27,9 @@ import java.util.UUID;
  * refresh tokens rotate on every use.
  */
 @Service
-public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase {
+public class AuthService
+        implements RegisterUseCase, LoginUseCase, RefreshTokenUseCase, LogoutUseCase,
+        AuthenticateAccessTokenUseCase {
 
     private final UserRepository userRepository;
     private final TokenStore tokenStore;
@@ -119,6 +124,20 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
             tokenStore.invalidateRefreshToken(jti);
         } catch (InvalidTokenException ignored) {
             // Silently ignore: if the token is already invalid there is nothing to revoke.
+        }
+    }
+
+    @Override
+    public Optional<AuthenticatedUser> authenticate(String accessToken) {
+        if (accessToken == null || accessToken.isBlank()) {
+            return Optional.empty();
+        }
+        try {
+            return Optional.of(tokenProvider.parseAccessToken(accessToken));
+        } catch (InvalidTokenException | IllegalArgumentException ex) {
+            // An unusable token is an unauthenticated request, not a failure:
+            // Spring Security turns the empty context into a 401.
+            return Optional.empty();
         }
     }
 
