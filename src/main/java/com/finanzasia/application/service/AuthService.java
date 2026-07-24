@@ -9,9 +9,9 @@ import com.finanzasia.domain.port.in.LoginUseCase;
 import com.finanzasia.domain.port.in.LogoutUseCase;
 import com.finanzasia.domain.port.in.RefreshTokenUseCase;
 import com.finanzasia.domain.port.in.RegisterUseCase;
+import com.finanzasia.domain.port.out.TokenProvider;
 import com.finanzasia.domain.port.out.TokenStore;
 import com.finanzasia.domain.port.out.UserRepository;
-import com.finanzasia.infrastructure.security.JwtService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -28,7 +28,7 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
 
     private final UserRepository userRepository;
     private final TokenStore tokenStore;
-    private final JwtService jwtService;
+    private final TokenProvider tokenProvider;
     private final PasswordEncoder passwordEncoder;
 
     /** Compared against when the email is unknown, so login timing does not leak whether an account exists. */
@@ -37,11 +37,11 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
     public AuthService(
             UserRepository userRepository,
             TokenStore tokenStore,
-            JwtService jwtService,
+            TokenProvider tokenProvider,
             PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.tokenStore = tokenStore;
-        this.jwtService = jwtService;
+        this.tokenProvider = tokenProvider;
         this.passwordEncoder = passwordEncoder;
         this.dummyPasswordHash = passwordEncoder.encode(
                 "timing-equalizer-" + UUID.randomUUID());
@@ -93,13 +93,13 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
 
     @Override
     public AuthTokens refresh(String refreshToken) {
-        String jti = jwtService.extractJti(refreshToken);
+        String jti = tokenProvider.extractJti(refreshToken);
 
         UUID userId = tokenStore.getUserIdForRefreshToken(jti)
                 .orElseThrow(() -> {
                     // Valid signature but unknown jti means the token was already rotated/revoked,
                     // possibly reused after theft. Treat as compromised and revoke all sessions.
-                    UUID suspectUserId = jwtService.extractUserId(refreshToken);
+                    UUID suspectUserId = tokenProvider.extractUserId(refreshToken);
                     tokenStore.revokeAllForUser(suspectUserId);
                     return new InvalidTokenException("token has been revoked or does not exist");
                 });
@@ -115,7 +115,7 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
     @Override
     public void logout(String refreshToken) {
         try {
-            String jti = jwtService.extractJti(refreshToken);
+            String jti = tokenProvider.extractJti(refreshToken);
             tokenStore.invalidateRefreshToken(jti);
         } catch (InvalidTokenException ignored) {
             // Silently ignore: if the token is already invalid there is nothing to revoke.
@@ -123,12 +123,12 @@ public class AuthService implements RegisterUseCase, LoginUseCase, RefreshTokenU
     }
 
     private AuthTokens issueTokenPair(User user) {
-        String accessToken = jwtService.generateAccessToken(user);
-        String refreshToken = jwtService.generateRefreshToken(user.getId());
+        String accessToken = tokenProvider.generateAccessToken(user);
+        String refreshToken = tokenProvider.generateRefreshToken(user.getId());
 
-        String jti = jwtService.extractJti(refreshToken);
-        tokenStore.storeRefreshToken(jti, user.getId(), jwtService.refreshTokenDuration());
+        String jti = tokenProvider.extractJti(refreshToken);
+        tokenStore.storeRefreshToken(jti, user.getId(), tokenProvider.refreshTokenDuration());
 
-        return new AuthTokens(accessToken, refreshToken, jwtService.accessExpiresInSeconds());
+        return new AuthTokens(accessToken, refreshToken, tokenProvider.accessExpiresInSeconds());
     }
 }

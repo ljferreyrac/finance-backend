@@ -5,9 +5,9 @@ import com.finanzasia.domain.exceptions.InvalidTokenException;
 import com.finanzasia.domain.exceptions.UserAlreadyExistsException;
 import com.finanzasia.domain.model.AuthTokens;
 import com.finanzasia.domain.model.User;
+import com.finanzasia.domain.port.out.TokenProvider;
 import com.finanzasia.domain.port.out.TokenStore;
 import com.finanzasia.domain.port.out.UserRepository;
-import com.finanzasia.infrastructure.security.JwtService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -42,7 +42,7 @@ class AuthServiceTest {
     private TokenStore tokenStore;
 
     @Mock
-    private JwtService jwtService;
+    private TokenProvider tokenProvider;
 
     @Mock
     private PasswordEncoder passwordEncoder;
@@ -51,7 +51,7 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(userRepository, tokenStore, jwtService, passwordEncoder);
+        authService = new AuthService(userRepository, tokenStore, tokenProvider, passwordEncoder);
         // The constructor encodes a dummy hash for timing equalization;
         // clear that interaction so per-test verifications only see calls
         // made by the method under test.
@@ -146,11 +146,11 @@ class AuthServiceTest {
 
             when(userRepository.findByEmail("ok@test.com")).thenReturn(Optional.of(user));
             when(passwordEncoder.matches("rawPass", "bcrypt-hash")).thenReturn(true);
-            when(jwtService.generateAccessToken(user)).thenReturn("access-jwt");
-            when(jwtService.generateRefreshToken(userId)).thenReturn("refresh-jwt");
-            when(jwtService.extractJti("refresh-jwt")).thenReturn("jti-value");
-            when(jwtService.refreshTokenDuration()).thenReturn(Duration.ofDays(7));
-            when(jwtService.accessExpiresInSeconds()).thenReturn(900L);
+            when(tokenProvider.generateAccessToken(user)).thenReturn("access-jwt");
+            when(tokenProvider.generateRefreshToken(userId)).thenReturn("refresh-jwt");
+            when(tokenProvider.extractJti("refresh-jwt")).thenReturn("jti-value");
+            when(tokenProvider.refreshTokenDuration()).thenReturn(Duration.ofDays(7));
+            when(tokenProvider.accessExpiresInSeconds()).thenReturn(900L);
 
             AuthTokens result = authService.login("ok@test.com", "rawPass");
 
@@ -213,14 +213,14 @@ class AuthServiceTest {
             UUID userId = UUID.randomUUID();
             User user = activeUser(userId, "u@test.com", "hash");
 
-            when(jwtService.extractJti("old-refresh")).thenReturn("old-jti");
+            when(tokenProvider.extractJti("old-refresh")).thenReturn("old-jti");
             when(tokenStore.getUserIdForRefreshToken("old-jti")).thenReturn(Optional.of(userId));
             when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-            when(jwtService.generateAccessToken(user)).thenReturn("new-access");
-            when(jwtService.generateRefreshToken(userId)).thenReturn("new-refresh");
-            when(jwtService.extractJti("new-refresh")).thenReturn("new-jti");
-            when(jwtService.refreshTokenDuration()).thenReturn(Duration.ofDays(7));
-            when(jwtService.accessExpiresInSeconds()).thenReturn(900L);
+            when(tokenProvider.generateAccessToken(user)).thenReturn("new-access");
+            when(tokenProvider.generateRefreshToken(userId)).thenReturn("new-refresh");
+            when(tokenProvider.extractJti("new-refresh")).thenReturn("new-jti");
+            when(tokenProvider.refreshTokenDuration()).thenReturn(Duration.ofDays(7));
+            when(tokenProvider.accessExpiresInSeconds()).thenReturn(900L);
 
             AuthTokens result = authService.refresh("old-refresh");
 
@@ -235,9 +235,9 @@ class AuthServiceTest {
         @DisplayName("treats an unknown jti as reuse: revokes all sessions for the user")
         void revokedToken() {
             UUID victimId = UUID.randomUUID();
-            when(jwtService.extractJti("bad-refresh")).thenReturn("missing-jti");
+            when(tokenProvider.extractJti("bad-refresh")).thenReturn("missing-jti");
             when(tokenStore.getUserIdForRefreshToken("missing-jti")).thenReturn(Optional.empty());
-            when(jwtService.extractUserId("bad-refresh")).thenReturn(victimId);
+            when(tokenProvider.extractUserId("bad-refresh")).thenReturn(victimId);
 
             assertThatThrownBy(() -> authService.refresh("bad-refresh"))
                     .isInstanceOf(InvalidTokenException.class);
@@ -252,7 +252,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("throws InvalidTokenException when the JWT cannot be parsed")
         void malformedToken() {
-            when(jwtService.extractJti("garbage")).thenThrow(new InvalidTokenException("malformed"));
+            when(tokenProvider.extractJti("garbage")).thenThrow(new InvalidTokenException("malformed"));
 
             assertThatThrownBy(() -> authService.refresh("garbage"))
                     .isInstanceOf(InvalidTokenException.class);
@@ -270,7 +270,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("invalidates the refresh token by jti")
         void success() {
-            when(jwtService.extractJti("valid-refresh")).thenReturn("jti-123");
+            when(tokenProvider.extractJti("valid-refresh")).thenReturn("jti-123");
 
             authService.logout("valid-refresh");
 
@@ -280,7 +280,7 @@ class AuthServiceTest {
         @Test
         @DisplayName("silently ignores InvalidTokenException from a malformed token")
         void malformedTokenIsIgnored() {
-            when(jwtService.extractJti("garbage")).thenThrow(new InvalidTokenException("bad token"));
+            when(tokenProvider.extractJti("garbage")).thenThrow(new InvalidTokenException("bad token"));
 
             authService.logout("garbage");
 
