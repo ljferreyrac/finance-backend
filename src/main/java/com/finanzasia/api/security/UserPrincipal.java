@@ -7,7 +7,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 
-/** Spring Security principal populated by the JWT filter; carries the user UUID controllers use to enforce ownership. */
+/** Spring Security principal from the JWT filter; carries the user UUID controllers use to enforce ownership. */
 public class UserPrincipal implements UserDetails {
 
     private final UUID id;

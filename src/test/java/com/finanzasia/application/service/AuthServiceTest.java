@@ -161,7 +161,7 @@ class AuthServiceTest {
         }
 
         @Test
-        @DisplayName("throws InvalidCredentialsException when user is not found, still hashing once for timing equalization")
+        @DisplayName("throws InvalidCredentials when user not found, still hashing once for timing equalization")
         void userNotFound() {
             when(userRepository.findByEmail("ghost@test.com")).thenReturn(Optional.empty());
 

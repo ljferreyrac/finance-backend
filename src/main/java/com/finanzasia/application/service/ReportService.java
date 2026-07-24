@@ -59,7 +59,7 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
         MonthlyReport.IncomeSummary incomeSummary =
                 new MonthlyReport.IncomeSummary(incomeTotal, incomeCount, currency);
 
-        // row.getCategory() is reused as both the category key and its label since the JOIN already returns the human-readable name.
+        // row.getCategory() is both key and label: the JOIN already returns the human-readable name.
         List<MonthlyReport.CategoryBreakdown> byCategory =
                 reportRepository.categoryBreakdownByMonth(userId, year, month, currency, accountId, categoryId, tagId)
                         .stream()
@@ -127,7 +127,7 @@ public class ReportService implements GetMonthlyReportUseCase, GetYearlyReportUs
                                 row.getCount()))
                         .toList();
 
-        // row.getCategory() is reused as both the category key and its label since the JOIN already returns the human-readable name.
+        // row.getCategory() is both key and label: the JOIN already returns the human-readable name.
         List<YearlyReport.CategoryBreakdown> byCategory =
                 reportRepository.categoryBreakdownByYear(userId, year, currency, accountId, categoryId, tagId)
                         .stream()
