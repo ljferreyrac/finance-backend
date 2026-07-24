@@ -6,9 +6,12 @@ import com.finanzasia.domain.exceptions.InvalidTransactionException;
 import com.finanzasia.domain.exceptions.TagNotFoundException;
 import com.finanzasia.domain.exceptions.TransactionNotFoundException;
 import com.finanzasia.domain.model.Account;
+import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.ExchangeRate;
 import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.model.Transaction;
+import com.finanzasia.domain.model.TransactionDetail;
+import com.finanzasia.domain.model.TransactionDetailPage;
 import com.finanzasia.domain.model.TransactionFilter;
 import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.model.TransactionType;
@@ -27,8 +30,11 @@ import java.time.LocalDate;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * Orchestrates all transaction use cases.
@@ -62,20 +68,32 @@ public class TransactionService implements TransactionUseCase {
 
     @Override
     @Transactional(readOnly = true)
-    public TransactionPage listTransactions(TransactionFilter filter) {
-        return transactionRepository.findWithFilter(filter);
+    public TransactionDetailPage listTransactions(TransactionFilter filter) {
+        TransactionPage page = transactionRepository.findWithFilter(filter);
+
+        // Resolved once per page rather than per item: a page shares most of its
+        // accounts and categories, so this is two queries instead of 2N.
+        Map<UUID, Account> accounts = accountsById(filter.userId());
+        Map<UUID, Category> categories = categoriesById(filter.userId());
+
+        List<TransactionDetail> items = page.items().stream()
+                .map(t -> toDetail(t, accounts, categories))
+                .toList();
+
+        return new TransactionDetailPage(items, page.nextCursor(), page.hasMore());
     }
 
     @Override
     @Transactional(readOnly = true)
-    public Transaction getTransaction(UUID userId, UUID transactionId) {
-        return transactionRepository.findByIdAndUser(transactionId, userId)
+    public TransactionDetail getTransaction(UUID userId, UUID transactionId) {
+        Transaction transaction = transactionRepository.findByIdAndUser(transactionId, userId)
                 .orElseThrow(() -> new TransactionNotFoundException(transactionId));
+        return toDetail(userId, transaction);
     }
 
     @Override
     @Transactional
-    public Transaction createTransaction(
+    public TransactionDetail createTransaction(
             UUID userId,
             TransactionType type,
             BigDecimal amount,
@@ -125,12 +143,12 @@ public class TransactionService implements TransactionUseCase {
         if (saved.getAmountLocal() != null) {
             transactionRepository.save(saved);
         }
-        return saved;
+        return toDetail(userId, saved);
     }
 
     @Override
     @Transactional
-    public Transaction updateTransaction(
+    public TransactionDetail updateTransaction(
             UUID userId,
             UUID transactionId,
             BigDecimal amount,
@@ -210,7 +228,7 @@ public class TransactionService implements TransactionUseCase {
         if (saved.getAmountLocal() != null) {
             transactionRepository.save(saved);
         }
-        return saved;
+        return toDetail(userId, saved);
     }
 
     @Override
@@ -405,5 +423,32 @@ public class TransactionService implements TransactionUseCase {
             throw new TagNotFoundException(missing);
         }
         return found;
+    }
+
+    private Map<UUID, Account> accountsById(UUID userId) {
+        return accountRepository.findAllByUser(userId).stream()
+                .collect(Collectors.toMap(Account::getId, Function.identity()));
+    }
+
+    private Map<UUID, Category> categoriesById(UUID userId) {
+        return categoryRepository.findAllByUser(userId).stream()
+                .collect(Collectors.toMap(Category::getId, Function.identity()));
+    }
+
+    private TransactionDetail toDetail(UUID userId, Transaction transaction) {
+        return toDetail(transaction, accountsById(userId), categoriesById(userId));
+    }
+
+    /** Null ids stay null: which references apply depends on the transaction type. */
+    private TransactionDetail toDetail(
+            Transaction t,
+            Map<UUID, Account> accounts,
+            Map<UUID, Category> categories) {
+        return new TransactionDetail(
+                t,
+                t.getAccountId() == null ? null : accounts.get(t.getAccountId()),
+                t.getFromAccountId() == null ? null : accounts.get(t.getFromAccountId()),
+                t.getToAccountId() == null ? null : accounts.get(t.getToAccountId()),
+                t.getCategoryId() == null ? null : categories.get(t.getCategoryId()));
     }
 }

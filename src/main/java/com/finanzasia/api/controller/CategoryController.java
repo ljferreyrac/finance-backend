@@ -5,8 +5,8 @@ import com.finanzasia.api.dto.CreateCategoryRequest;
 import com.finanzasia.api.dto.UpdateCategoryRequest;
 import com.finanzasia.api.security.UserPrincipal;
 import com.finanzasia.domain.model.Category;
+import com.finanzasia.domain.model.CategoryDetail;
 import com.finanzasia.domain.port.in.CategoryUseCase;
-import com.finanzasia.domain.port.out.CategoryRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -40,12 +40,9 @@ import java.util.UUID;
 public class CategoryController {
 
     private final CategoryUseCase categoryUseCase;
-    private final CategoryRepository categoryRepository;
 
-    public CategoryController(CategoryUseCase categoryUseCase,
-                              CategoryRepository categoryRepository) {
+    public CategoryController(CategoryUseCase categoryUseCase) {
         this.categoryUseCase = categoryUseCase;
-        this.categoryRepository = categoryRepository;
     }
 
     @Operation(summary = "List categories",
@@ -80,7 +77,7 @@ public class CategoryController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateCategoryRequest request) {
 
-        Category category = categoryUseCase.createCategory(
+        CategoryDetail category = categoryUseCase.createCategory(
                 principal.getId(),
                 request.name(),
                 request.color(),
@@ -109,7 +106,7 @@ public class CategoryController {
             @Parameter(description = "Category UUID") @PathVariable UUID id,
             @Valid @RequestBody UpdateCategoryRequest request) {
 
-        Category category = categoryUseCase.updateCategory(
+        CategoryDetail category = categoryUseCase.updateCategory(
                 principal.getId(),
                 id,
                 request.name(),
@@ -155,12 +152,12 @@ public class CategoryController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Category UUID") @PathVariable UUID id) {
 
-        Category category = categoryUseCase.setDefaultCategory(principal.getId(), id);
+        CategoryDetail category = categoryUseCase.setDefaultCategory(principal.getId(), id);
         return toDTO(category);
     }
 
-    private CategoryDTO toDTO(Category category) {
-        long expenseCount = categoryRepository.countExpensesByCategory(category.getId());
+    private CategoryDTO toDTO(CategoryDetail detail) {
+        Category category = detail.category();
         return new CategoryDTO(
                 category.getId(),
                 category.getName(),
@@ -168,6 +165,6 @@ public class CategoryController {
                 category.getIcon(),
                 category.isDefault(),
                 category.getPosition(),
-                expenseCount);
+                detail.expenseCount());
     }
 }

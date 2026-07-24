@@ -7,6 +7,7 @@ import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.Transaction;
+import com.finanzasia.domain.model.TransactionDetail;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.model.ExchangeRate;
 import com.finanzasia.domain.port.in.GetTodayExchangeRateUseCase;
@@ -255,12 +256,13 @@ class TransactionServiceTest {
 
             BigDecimal userConfirmedLocal = new BigDecimal("374.00");
             // USD 100 -> PEN 374.00; derived rate = 374.00 / 100 = 3.7400
-            Transaction result = service.createTransaction(
+            TransactionDetail result = service.createTransaction(
                     USER_ID, TransactionType.EXPENSE, AMOUNT, "USD",
                     ACCOUNT_ID, null, null, CATEGORY_ID, "Amazon", null, TODAY, null, userConfirmedLocal);
 
-            assertThat(result.getAmountLocal()).isEqualByComparingTo(userConfirmedLocal);
-            assertThat(result.getExchangeRateApplied()).isEqualByComparingTo(new BigDecimal("3.7400"));
+            assertThat(result.transaction().getAmountLocal()).isEqualByComparingTo(userConfirmedLocal);
+            assertThat(result.transaction().getExchangeRateApplied())
+                    .isEqualByComparingTo(new BigDecimal("3.7400"));
         }
     }
 

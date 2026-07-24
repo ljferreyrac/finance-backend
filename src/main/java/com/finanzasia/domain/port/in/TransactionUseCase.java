@@ -1,8 +1,8 @@
 package com.finanzasia.domain.port.in;
 
-import com.finanzasia.domain.model.Transaction;
+import com.finanzasia.domain.model.TransactionDetail;
+import com.finanzasia.domain.model.TransactionDetailPage;
 import com.finanzasia.domain.model.TransactionFilter;
-import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.model.TransactionType;
 
 import java.math.BigDecimal;
@@ -12,11 +12,11 @@ import java.util.UUID;
 
 public interface TransactionUseCase {
 
-    TransactionPage listTransactions(TransactionFilter filter);
+    TransactionDetailPage listTransactions(TransactionFilter filter);
 
-    Transaction getTransaction(UUID userId, UUID transactionId);
+    TransactionDetail getTransaction(UUID userId, UUID transactionId);
 
-    Transaction createTransaction(
+    TransactionDetail createTransaction(
             UUID userId,
             TransactionType type,
             BigDecimal amount,
@@ -31,7 +31,7 @@ public interface TransactionUseCase {
             List<UUID> tagIds,
             BigDecimal amountLocal);
 
-    Transaction updateTransaction(
+    TransactionDetail updateTransaction(
             UUID userId,
             UUID transactionId,
             BigDecimal amount,

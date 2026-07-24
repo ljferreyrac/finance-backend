@@ -1,6 +1,6 @@
 package com.finanzasia.domain.port.in;
 
-import com.finanzasia.domain.model.Account;
+import com.finanzasia.domain.model.AccountDetail;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.NetWorth;
 
@@ -10,11 +10,11 @@ import java.util.UUID;
 
 public interface AccountUseCase {
 
-    List<Account> listAccounts(UUID userId);
+    List<AccountDetail> listAccounts(UUID userId);
 
     NetWorth getNetWorth(UUID userId, boolean includeDebt);
 
-    Account createAccount(
+    AccountDetail createAccount(
             UUID userId,
             String name,
             AccountType type,
@@ -28,7 +28,7 @@ public interface AccountUseCase {
             boolean isDefault,
             UUID linkedAccountId);
 
-    Account updateAccount(
+    AccountDetail updateAccount(
             UUID userId,
             UUID accountId,
             String name,
@@ -42,5 +42,5 @@ public interface AccountUseCase {
 
     void deleteAccount(UUID userId, UUID accountId);
 
-    Account setDefaultAccount(UUID userId, UUID accountId);
+    AccountDetail setDefaultAccount(UUID userId, UUID accountId);
 }

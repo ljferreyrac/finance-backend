@@ -4,13 +4,11 @@ import com.finanzasia.api.dto.AccountDTO;
 import com.finanzasia.api.dto.CreateAccountRequest;
 import com.finanzasia.api.dto.NetWorthDTO;
 import com.finanzasia.api.dto.UpdateAccountRequest;
-import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.api.security.UserPrincipal;
 import com.finanzasia.domain.model.Account;
+import com.finanzasia.domain.model.AccountDetail;
 import com.finanzasia.domain.model.NetWorth;
-import java.math.BigDecimal;
 import com.finanzasia.domain.port.in.AccountUseCase;
-import com.finanzasia.domain.port.out.AccountRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -44,11 +42,9 @@ import java.util.UUID;
 public class AccountController {
 
     private final AccountUseCase accountUseCase;
-    private final AccountRepository accountRepository;
 
-    public AccountController(AccountUseCase accountUseCase, AccountRepository accountRepository) {
+    public AccountController(AccountUseCase accountUseCase) {
         this.accountUseCase = accountUseCase;
-        this.accountRepository = accountRepository;
     }
 
     @Operation(summary = "List accounts", description = "Returns all accounts owned by the authenticated user.")
@@ -93,7 +89,7 @@ public class AccountController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Valid @RequestBody CreateAccountRequest request) {
 
-        Account account = accountUseCase.createAccount(
+        AccountDetail account = accountUseCase.createAccount(
                 principal.getId(),
                 request.name(),
                 request.type(),
@@ -125,7 +121,7 @@ public class AccountController {
             @Parameter(description = "Account UUID") @PathVariable UUID id,
             @Valid @RequestBody UpdateAccountRequest request) {
 
-        Account account = accountUseCase.updateAccount(
+        AccountDetail account = accountUseCase.updateAccount(
                 principal.getId(),
                 id,
                 request.name(),
@@ -170,13 +166,12 @@ public class AccountController {
             @AuthenticationPrincipal UserPrincipal principal,
             @Parameter(description = "Account UUID") @PathVariable UUID id) {
 
-        Account account = accountUseCase.setDefaultAccount(principal.getId(), id);
+        AccountDetail account = accountUseCase.setDefaultAccount(principal.getId(), id);
         return toDTO(account);
     }
 
-    private AccountDTO toDTO(Account account) {
-        long txCount = accountRepository.countTransactionsByAccountId(account.getId());
-        BigDecimal availableCredit = computeAvailableCredit(account);
+    private AccountDTO toDTO(AccountDetail detail) {
+        Account account = detail.account();
         return new AccountDTO(
                 account.getId(),
                 account.getName(),
@@ -190,20 +185,9 @@ public class AccountController {
                 account.getColor(),
                 account.isDefault(),
                 account.isActive(),
-                txCount,
+                detail.transactionCount(),
                 account.getLinkedAccountId(),
-                availableCredit);
+                detail.availableCredit());
     }
 
-    /**
-     * Available credit is {@code creditLimit - |currentBalance|}; null for non-credit accounts
-     * or when no limit is set. currentBalance is assumed PEN-equivalent.
-     */
-    private BigDecimal computeAvailableCredit(Account account) {
-        if (account.getType() != AccountType.CREDIT_CARD || account.getCreditLimit() == null) {
-            return null;
-        }
-        BigDecimal outstanding = account.getCurrentBalance().abs();
-        return account.getCreditLimit().subtract(outstanding);
-    }
 }

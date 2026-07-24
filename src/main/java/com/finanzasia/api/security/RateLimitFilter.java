@@ -1,6 +1,5 @@
-package com.finanzasia.infrastructure.security;
+package com.finanzasia.api.security;
 
-import com.finanzasia.api.security.UserPrincipal;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
