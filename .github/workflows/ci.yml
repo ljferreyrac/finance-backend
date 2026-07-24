@@ -26,6 +26,12 @@ jobs:
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
           restore-keys: ${{ runner.os }}-m2
 
+      # Runs before the full build so a boundary break fails fast under its own
+      # name, instead of being one red line among all the other tests. These
+      # rules only read compiled classes, so they need no secrets or database.
+      - name: Verify hexagonal architecture boundaries
+        run: mvn test -Dtest=ArchitectureTest -DfailIfNoTests=false -Dcheckstyle.skip=true -Dspotbugs.skip=true
+
       - name: Run tests, checkstyle and spotbugs
         env:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
