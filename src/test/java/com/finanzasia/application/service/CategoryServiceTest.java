@@ -5,6 +5,7 @@ import com.finanzasia.domain.exceptions.CategoryNotFoundException;
 import com.finanzasia.domain.exceptions.DuplicateCategoryNameException;
 import com.finanzasia.domain.exceptions.LastCategoryException;
 import com.finanzasia.domain.model.Category;
+import com.finanzasia.domain.model.CategoryDetail;
 import com.finanzasia.domain.port.out.CategoryRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -64,10 +65,11 @@ class CategoryServiceTest {
                     buildCategory(UUID.randomUUID(), USER_ID, "Transporte", false));
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(expected);
 
-            List<Category> result = service.listCategories(USER_ID);
+            List<CategoryDetail> result = service.listCategories(USER_ID);
 
             assertThat(result).hasSize(2);
-            assertThat(result).isSameAs(expected);
+            assertThat(result).extracting(CategoryDetail::category)
+                    .containsExactlyElementsOf(expected);
         }
     }
 
@@ -84,12 +86,12 @@ class CategoryServiceTest {
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Category result = service.createCategory(USER_ID, "Comida", "#FF5733", "food", false);
+            CategoryDetail result = service.createCategory(USER_ID, "Comida", "#FF5733", "food", false);
 
-            assertThat(result.getId()).isNotNull();
-            assertThat(result.getName()).isEqualTo("Comida");
-            assertThat(result.getUserId()).isEqualTo(USER_ID);
-            assertThat(result.isDefault()).isFalse();
+            assertThat(result.category().getId()).isNotNull();
+            assertThat(result.category().getName()).isEqualTo("Comida");
+            assertThat(result.category().getUserId()).isEqualTo(USER_ID);
+            assertThat(result.category().isDefault()).isFalse();
             verify(categoryRepository).save(any(Category.class));
         }
 
@@ -111,10 +113,10 @@ class CategoryServiceTest {
             when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Category result = service.createCategory(USER_ID, "Comida", "#FF5733", "food", true);
+            CategoryDetail result = service.createCategory(USER_ID, "Comida", "#FF5733", "food", true);
 
             verify(categoryRepository).clearDefaultForUser(USER_ID);
-            assertThat(result.isDefault()).isTrue();
+            assertThat(result.category().isDefault()).isTrue();
         }
 
         @Test
@@ -144,11 +146,11 @@ class CategoryServiceTest {
                     .thenReturn(Optional.of(existing));
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Category result = service.updateCategory(USER_ID, CATEGORY_ID, "Gastos de casa",
+            CategoryDetail result = service.updateCategory(USER_ID, CATEGORY_ID, "Gastos de casa",
                     "#3498DB", "home", 3);
 
-            assertThat(result.getName()).isEqualTo("Gastos de casa");
-            assertThat(result.getPosition()).isEqualTo(3);
+            assertThat(result.category().getName()).isEqualTo("Gastos de casa");
+            assertThat(result.category().getPosition()).isEqualTo(3);
             verify(categoryRepository).save(existing);
         }
 
@@ -267,12 +269,12 @@ class CategoryServiceTest {
             ArgumentCaptor<Category> captor = ArgumentCaptor.forClass(Category.class);
             when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Category result = service.setDefaultCategory(USER_ID, CATEGORY_ID);
+            CategoryDetail result = service.setDefaultCategory(USER_ID, CATEGORY_ID);
 
             verify(categoryRepository).clearDefaultForUser(USER_ID);
             verify(categoryRepository).save(captor.capture());
             assertThat(captor.getValue().isDefault()).isTrue();
-            assertThat(result.isDefault()).isTrue();
+            assertThat(result.category().isDefault()).isTrue();
         }
 
         @Test

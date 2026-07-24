@@ -4,6 +4,7 @@ import com.finanzasia.domain.exceptions.CategoryInUseException;
 import com.finanzasia.domain.exceptions.CategoryNotFoundException;
 import com.finanzasia.domain.exceptions.LastCategoryException;
 import com.finanzasia.domain.model.Category;
+import com.finanzasia.domain.model.CategoryDetail;
 import com.finanzasia.domain.port.in.CategoryUseCase;
 import com.finanzasia.domain.port.out.CategoryRepository;
 import org.springframework.stereotype.Service;
@@ -30,13 +31,15 @@ public class CategoryService implements CategoryUseCase {
     }
 
     @Override
-    public List<Category> listCategories(UUID userId) {
-        return categoryRepository.findAllByUser(userId);
+    public List<CategoryDetail> listCategories(UUID userId) {
+        return categoryRepository.findAllByUser(userId).stream()
+                .map(this::toDetail)
+                .toList();
     }
 
     @Override
     @Transactional
-    public Category createCategory(UUID userId, String name, String color,
+    public CategoryDetail createCategory(UUID userId, String name, String color,
                                    String icon, boolean isDefault) {
         if (categoryRepository.countCategoriesByUser(userId) >= MAX_CATEGORIES_PER_USER) {
             throw new com.finanzasia.domain.exceptions.CategoryLimitExceededException(MAX_CATEGORIES_PER_USER);
@@ -63,12 +66,12 @@ public class CategoryService implements CategoryUseCase {
                 now,
                 now);
 
-        return categoryRepository.save(category);
+        return toDetail(categoryRepository.save(category));
     }
 
     @Override
     @Transactional
-    public Category updateCategory(UUID userId, UUID categoryId,
+    public CategoryDetail updateCategory(UUID userId, UUID categoryId,
                                    String name, String color, String icon, Integer position) {
         Category category = categoryRepository.findByIdAndUser(categoryId, userId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
@@ -83,7 +86,7 @@ public class CategoryService implements CategoryUseCase {
         }
 
         category.update(trimmedName, color, icon, position, Instant.now());
-        return categoryRepository.save(category);
+        return toDetail(categoryRepository.save(category));
     }
 
     @Override
@@ -111,13 +114,13 @@ public class CategoryService implements CategoryUseCase {
 
     @Override
     @Transactional
-    public Category setDefaultCategory(UUID userId, UUID categoryId) {
+    public CategoryDetail setDefaultCategory(UUID userId, UUID categoryId) {
         Category category = categoryRepository.findByIdAndUser(categoryId, userId)
                 .orElseThrow(() -> new CategoryNotFoundException(categoryId));
 
         categoryRepository.clearDefaultForUser(userId);
         category.markAsDefault(Instant.now());
-        return categoryRepository.save(category);
+        return toDetail(categoryRepository.save(category));
     }
 
     /** Appends after the current max position so existing ordering is never disturbed. */
@@ -127,5 +130,15 @@ public class CategoryService implements CategoryUseCase {
                 .mapToInt(Category::getPosition)
                 .max()
                 .orElse(0) + 1;
+    }
+
+    /**
+     * Attaches the expense count so the web layer never has to query for it
+     * itself.
+     */
+    private CategoryDetail toDetail(Category category) {
+        return new CategoryDetail(
+                category,
+                categoryRepository.countExpensesByCategory(category.getId()));
     }
 }

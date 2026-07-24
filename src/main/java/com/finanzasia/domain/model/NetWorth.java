@@ -9,5 +9,5 @@ import java.util.List;
 public record NetWorth(
         BigDecimal totalPEN,
         BigDecimal totalUSD,
-        List<Account> accounts
+        List<AccountDetail> accounts
 ) {}

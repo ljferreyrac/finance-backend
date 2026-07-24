@@ -3,6 +3,7 @@ package com.finanzasia.application.service;
 import com.finanzasia.domain.exceptions.AccountInUseException;
 import com.finanzasia.domain.exceptions.AccountNotFoundException;
 import com.finanzasia.domain.model.Account;
+import com.finanzasia.domain.model.AccountDetail;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.NetWorth;
 import com.finanzasia.domain.port.out.AccountRepository;
@@ -65,10 +66,10 @@ class AccountServiceTest {
             Account a = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
             when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(a));
 
-            List<Account> result = service.listAccounts(USER_ID);
+            List<AccountDetail> result = service.listAccounts(USER_ID);
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getId()).isEqualTo(ACCOUNT_ID);
+            assertThat(result.get(0).account().getId()).isEqualTo(ACCOUNT_ID);
         }
     }
 
@@ -154,11 +155,11 @@ class AccountServiceTest {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(existing));
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Account result = service.updateAccount(USER_ID, ACCOUNT_ID,
+            AccountDetail result = service.updateAccount(USER_ID, ACCOUNT_ID,
                     "Updated Name", "BBVA", null, null, null, null, true, null);
 
-            assertThat(result.getName()).isEqualTo("Updated Name");
-            assertThat(result.getBank()).isEqualTo("BBVA");
+            assertThat(result.account().getName()).isEqualTo("Updated Name");
+            assertThat(result.account().getBank()).isEqualTo("BBVA");
         }
     }
 
@@ -219,10 +220,10 @@ class AccountServiceTest {
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(account));
             when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
 
-            Account result = service.setDefaultAccount(USER_ID, ACCOUNT_ID);
+            AccountDetail result = service.setDefaultAccount(USER_ID, ACCOUNT_ID);
 
             verify(accountRepository).clearDefaultForUser(USER_ID);
-            assertThat(result.isDefault()).isTrue();
+            assertThat(result.account().isDefault()).isTrue();
         }
 
         @Test

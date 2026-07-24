@@ -3,6 +3,7 @@ package com.finanzasia.application.service;
 import com.finanzasia.domain.exceptions.AccountInUseException;
 import com.finanzasia.domain.exceptions.AccountNotFoundException;
 import com.finanzasia.domain.model.Account;
+import com.finanzasia.domain.model.AccountDetail;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.NetWorth;
 import com.finanzasia.domain.port.in.AccountUseCase;
@@ -32,8 +33,10 @@ public class AccountService implements AccountUseCase {
     }
 
     @Override
-    public List<Account> listAccounts(UUID userId) {
-        return accountRepository.findAllByUser(userId);
+    public List<AccountDetail> listAccounts(UUID userId) {
+        return accountRepository.findAllByUser(userId).stream()
+                .map(this::toDetail)
+                .toList();
     }
 
     @Override
@@ -43,7 +46,8 @@ public class AccountService implements AccountUseCase {
         BigDecimal totalPEN = computeNetWorthForCurrency(accounts, "PEN", includeDebt);
         BigDecimal totalUSD = computeNetWorthForCurrency(accounts, "USD", includeDebt);
 
-        return new NetWorth(totalPEN, totalUSD, accounts);
+        List<AccountDetail> details = accounts.stream().map(this::toDetail).toList();
+        return new NetWorth(totalPEN, totalUSD, details);
     }
 
     /**
@@ -70,7 +74,7 @@ public class AccountService implements AccountUseCase {
 
     @Override
     @Transactional
-    public Account createAccount(
+    public AccountDetail createAccount(
             UUID userId,
             String name,
             AccountType type,
@@ -120,12 +124,12 @@ public class AccountService implements AccountUseCase {
                 now,
                 now);
 
-        return accountRepository.save(account);
+        return toDetail(accountRepository.save(account));
     }
 
     @Override
     @Transactional
-    public Account updateAccount(
+    public AccountDetail updateAccount(
             UUID userId,
             UUID accountId,
             String name,
@@ -161,7 +165,7 @@ public class AccountService implements AccountUseCase {
         account.setLinkedAccountId(linkedAccountId);
         account.setUpdatedAt(Instant.now());
 
-        return accountRepository.save(account);
+        return toDetail(accountRepository.save(account));
     }
 
     @Override
@@ -180,13 +184,13 @@ public class AccountService implements AccountUseCase {
 
     @Override
     @Transactional
-    public Account setDefaultAccount(UUID userId, UUID accountId) {
+    public AccountDetail setDefaultAccount(UUID userId, UUID accountId) {
         Account account = accountRepository.findByIdAndUser(accountId, userId)
                 .orElseThrow(() -> new AccountNotFoundException(accountId));
 
         accountRepository.clearDefaultForUser(userId);
         account.markAsDefault(Instant.now());
-        return accountRepository.save(account);
+        return toDetail(accountRepository.save(account));
     }
 
     /**
@@ -210,5 +214,26 @@ public class AccountService implements AccountUseCase {
             account.debit(delta.abs());
         }
         accountRepository.save(account);
+    }
+
+    /**
+     * Attaches the figures the web layer needs so it never has to query for
+     * them itself.
+     */
+    private AccountDetail toDetail(Account account) {
+        long transactionCount = accountRepository.countTransactionsByAccountId(account.getId());
+        return new AccountDetail(account, transactionCount, availableCredit(account));
+    }
+
+    /**
+     * Available credit is {@code creditLimit - |currentBalance|}; null for
+     * non-credit accounts or when no limit is set. currentBalance is assumed
+     * PEN-equivalent.
+     */
+    private BigDecimal availableCredit(Account account) {
+        if (account.getType() != AccountType.CREDIT_CARD || account.getCreditLimit() == null) {
+            return null;
+        }
+        return account.getCreditLimit().subtract(account.getCurrentBalance().abs());
     }
 }
