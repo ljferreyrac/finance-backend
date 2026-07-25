@@ -276,21 +276,23 @@
                                          phase of the coverage plan; never lower either one.
 
                                          Note: JaCoCo rounds the measured ratio to the scale of the
-                                         declared minimum before comparing, so a minimum of 0.40
-                                         carries about half a point of slack (e.g. 0.3951 rounds up
+                                         declared minimum before comparing, so a minimum of 0.55
+                                         carries about half a point of slack (e.g. 0.5451 rounds up
                                          and passes). Fine for a floor meant to stop decay. -->
                                     <limits>
-                                        <!-- Achieved: 40.37% (847/2098). Target: 0.90. -->
+                                        <!-- Achieved after Phase 1 (unit tests: exception handler,
+                                             JwtService, domain.model, domain.exceptions, api.dto):
+                                             55.00% (1154/2098). Target: 0.90. -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.40</minimum>
+                                            <minimum>0.55</minimum>
                                         </limit>
-                                        <!-- Achieved: 59.16% (226/382). Target: 0.90. -->
+                                        <!-- Achieved: 65.45% (250/382). Target: 0.90. -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.59</minimum>
+                                            <minimum>0.65</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
