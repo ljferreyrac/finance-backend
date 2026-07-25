@@ -4,6 +4,7 @@ import com.finanzasia.domain.exceptions.CategoryInUseException;
 import com.finanzasia.domain.exceptions.CategoryNotFoundException;
 import com.finanzasia.domain.exceptions.DuplicateCategoryNameException;
 import com.finanzasia.domain.exceptions.LastCategoryException;
+import com.finanzasia.domain.exceptions.CategoryLimitExceededException;
 import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.CategoryDetail;
 import com.finanzasia.domain.port.out.CategoryRepository;
@@ -288,6 +289,92 @@ class CategoryServiceTest {
 
             verify(categoryRepository, never()).clearDefaultForUser(any());
             verify(categoryRepository, never()).save(any());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // guards not covered elsewhere
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("guards")
+    class Guards {
+
+        @Test
+        @DisplayName("createCategory rejects once the per-user limit is reached")
+        void createAtLimitThrows() {
+            when(categoryRepository.countCategoriesByUser(USER_ID))
+                    .thenReturn((long) CategoryService.MAX_CATEGORIES_PER_USER);
+
+            assertThatThrownBy(() ->
+                    service.createCategory(USER_ID, "Extra", "#FFF", "tag", false))
+                    .isInstanceOf(CategoryLimitExceededException.class);
+
+            verify(categoryRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("updateCategory rejects a blank name")
+        void updateWithBlankNameThrows() {
+            Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+
+            assertThatThrownBy(() ->
+                    service.updateCategory(USER_ID, CATEGORY_ID, "   ", null, null, null))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessageContaining("must not be blank");
+        }
+
+        @Test
+        @DisplayName("updateCategory keeps the existing name when none is supplied")
+        void updateWithNullNameKeepsExisting() {
+            Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            CategoryDetail result =
+                    service.updateCategory(USER_ID, CATEGORY_ID, null, "#000", null, null);
+
+            assertThat(result.category().getName()).isEqualTo("Comida");
+        }
+
+        @Test
+        @DisplayName("deleteCategory rejects a reassign target the user does not own")
+        void deleteWithUnownedReassignTargetThrows() {
+            UUID reassignTo = UUID.randomUUID();
+            Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(categoryRepository.countCategoriesByUser(USER_ID)).thenReturn(5L);
+            when(categoryRepository.countExpensesByCategory(CATEGORY_ID)).thenReturn(3L);
+            when(categoryRepository.findByIdAndUser(reassignTo, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.deleteCategory(USER_ID, CATEGORY_ID, reassignTo))
+                    .isInstanceOf(CategoryNotFoundException.class);
+
+            verify(categoryRepository, never()).delete(any());
+        }
+
+        @Test
+        @DisplayName("deleteCategory reassigns expenses to the chosen target")
+        void deleteReassignsExpenses() {
+            UUID reassignTo = UUID.randomUUID();
+            Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(categoryRepository.countCategoriesByUser(USER_ID)).thenReturn(5L);
+            when(categoryRepository.countExpensesByCategory(CATEGORY_ID)).thenReturn(3L);
+            when(categoryRepository.findByIdAndUser(reassignTo, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(reassignTo, USER_ID, "Otros", false)));
+
+            service.deleteCategory(USER_ID, CATEGORY_ID, reassignTo);
+
+            verify(categoryRepository).reassignExpenses(CATEGORY_ID, reassignTo, USER_ID);
+            verify(categoryRepository).delete(CATEGORY_ID);
         }
     }
 }

@@ -1,6 +1,7 @@
 package com.finanzasia.application.service;
 
 import com.finanzasia.domain.exceptions.AccountInUseException;
+import com.finanzasia.domain.exceptions.AccountLimitExceededException;
 import com.finanzasia.domain.exceptions.AccountNotFoundException;
 import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.AccountDetail;
@@ -269,5 +270,255 @@ class AccountServiceTest {
             assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.ZERO);
             assertThat(result.totalUSD()).isEqualByComparingTo(BigDecimal.ZERO);
         }
+
+        @Test
+        @DisplayName("excludes inactive accounts from the totals")
+        void getNetWorthSkipsInactiveAccounts() {
+            Account active = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            Account inactive = new Account(UUID.randomUUID(), USER_ID, "Closed", AccountType.BANK,
+                    "BCP", "PEN", BigDecimal.valueOf(999), null, null, null,
+                    "#000000", false, false, null, Instant.now(), Instant.now());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(active, inactive));
+
+            NetWorth result = service.getNetWorth(USER_ID, true);
+
+            assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.valueOf(100));
+        }
+
+        @Test
+        @DisplayName("treats a credit card with no limit set as its plain balance")
+        void getNetWorthCreditCardWithoutLimitUsesBalance() {
+            Account card = creditCard(BigDecimal.valueOf(-300), null);
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(card));
+
+            NetWorth result = service.getNetWorth(USER_ID, true);
+
+            // Without a limit there is no debt figure to derive, so the balance stands.
+            assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.valueOf(-300));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // availableCredit (exposed through AccountDetail)
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("availableCredit")
+    class AvailableCredit {
+
+        @Test
+        @DisplayName("is null for a non-credit account")
+        void nullForNonCreditAccount() {
+            Account bank = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(500), false);
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bank));
+
+            List<AccountDetail> result = service.listAccounts(USER_ID);
+
+            assertThat(result.get(0).availableCredit()).isNull();
+        }
+
+        @Test
+        @DisplayName("is null for a credit card with no limit set")
+        void nullForCreditCardWithoutLimit() {
+            when(accountRepository.findAllByUser(USER_ID))
+                    .thenReturn(List.of(creditCard(BigDecimal.valueOf(-200), null)));
+
+            List<AccountDetail> result = service.listAccounts(USER_ID);
+
+            assertThat(result.get(0).availableCredit()).isNull();
+        }
+
+        @Test
+        @DisplayName("is limit minus the absolute outstanding balance")
+        void limitMinusOutstanding() {
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(
+                    List.of(creditCard(BigDecimal.valueOf(-300), BigDecimal.valueOf(1000))));
+
+            List<AccountDetail> result = service.listAccounts(USER_ID);
+
+            assertThat(result.get(0).availableCredit())
+                    .isEqualByComparingTo(BigDecimal.valueOf(700));
+        }
+
+        @Test
+        @DisplayName("uses the magnitude of the balance regardless of its sign")
+        void usesAbsoluteValueOfBalance() {
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(
+                    List.of(creditCard(BigDecimal.valueOf(300), BigDecimal.valueOf(1000))));
+
+            List<AccountDetail> result = service.listAccounts(USER_ID);
+
+            assertThat(result.get(0).availableCredit())
+                    .isEqualByComparingTo(BigDecimal.valueOf(700));
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // linked account validation
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("linked account validation")
+    class LinkedAccountValidation {
+
+        private final UUID linkedId = UUID.randomUUID();
+
+        @Test
+        @DisplayName("create rejects a linked account the user does not own")
+        void createRejectsUnknownLinkedAccount() {
+            when(accountRepository.countByUser(USER_ID)).thenReturn(1L);
+            when(accountRepository.findByIdAndUser(linkedId, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createAccount(USER_ID, "Yape", AccountType.WALLET,
+                    null, "PEN", BigDecimal.ZERO, null, null, null, "#FFF", false, linkedId))
+                    .isInstanceOf(AccountNotFoundException.class);
+
+            verify(accountRepository, never()).save(any());
+        }
+
+        @Test
+        @DisplayName("create accepts a linked account the user owns")
+        void createAcceptsOwnedLinkedAccount() {
+            Account parent = buildAccount(linkedId, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.countByUser(USER_ID)).thenReturn(1L);
+            when(accountRepository.findByIdAndUser(linkedId, USER_ID))
+                    .thenReturn(Optional.of(parent));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            AccountDetail result = service.createAccount(USER_ID, "Yape", AccountType.WALLET,
+                    null, "PEN", BigDecimal.ZERO, null, null, null, "#FFF", false, linkedId);
+
+            assertThat(result.account().getLinkedAccountId()).isEqualTo(linkedId);
+        }
+
+        @Test
+        @DisplayName("update rejects a linked account the user does not own")
+        void updateRejectsUnknownLinkedAccount() {
+            Account existing = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(linkedId, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.updateAccount(USER_ID, ACCOUNT_ID, "n", "BCP",
+                    null, null, null, "#FFF", null, linkedId))
+                    .isInstanceOf(AccountNotFoundException.class);
+
+            verify(accountRepository, never()).save(any());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // account limit
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("createAccount rejects once the per-user account limit is reached")
+    void createAccountAtLimitThrows() {
+        when(accountRepository.countByUser(USER_ID))
+                .thenReturn((long) AccountService.MAX_ACCOUNTS_PER_USER);
+
+        assertThatThrownBy(() -> service.createAccount(USER_ID, "One too many", AccountType.BANK,
+                "BCP", "PEN", BigDecimal.ZERO, null, null, null, "#FFF", false, null))
+                .isInstanceOf(AccountLimitExceededException.class);
+
+        verify(accountRepository, never()).save(any());
+    }
+
+    // ------------------------------------------------------------------
+    // adjustBalance
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("adjustBalance")
+    class AdjustBalance {
+
+        @Test
+        @DisplayName("credits the account when the delta is positive")
+        void positiveDeltaCredits() {
+            Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.adjustBalance(ACCOUNT_ID, BigDecimal.valueOf(50));
+
+            assertThat(account.getCurrentBalance()).isEqualByComparingTo(BigDecimal.valueOf(150));
+        }
+
+        @Test
+        @DisplayName("credits rather than debits on a zero delta")
+        void zeroDeltaCredits() {
+            Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.adjustBalance(ACCOUNT_ID, BigDecimal.ZERO);
+
+            assertThat(account.getCurrentBalance()).isEqualByComparingTo(BigDecimal.valueOf(100));
+        }
+
+        @Test
+        @DisplayName("debits the absolute amount when the delta is negative")
+        void negativeDeltaDebits() {
+            Account account = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(account));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.adjustBalance(ACCOUNT_ID, BigDecimal.valueOf(-40));
+
+            assertThat(account.getCurrentBalance()).isEqualByComparingTo(BigDecimal.valueOf(60));
+        }
+
+        @Test
+        @DisplayName("applies the adjustment to the parent when the account is linked")
+        void linkedAccountDelegatesToParent() {
+            UUID parentId = UUID.randomUUID();
+            Account child = new Account(ACCOUNT_ID, USER_ID, "Yape", AccountType.WALLET,
+                    null, "PEN", BigDecimal.valueOf(0), null, null, null,
+                    "#FFF", false, true, parentId, Instant.now(), Instant.now());
+            Account parent = buildAccount(parentId, "PEN", BigDecimal.valueOf(500), false);
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(child));
+            when(accountRepository.findById(parentId)).thenReturn(Optional.of(parent));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.adjustBalance(ACCOUNT_ID, BigDecimal.valueOf(-100));
+
+            assertThat(parent.getCurrentBalance()).isEqualByComparingTo(BigDecimal.valueOf(400));
+            assertThat(child.getCurrentBalance()).isEqualByComparingTo(BigDecimal.ZERO);
+            verify(accountRepository).save(parent);
+        }
+
+        @Test
+        @DisplayName("throws when the account does not exist")
+        void missingAccountThrows() {
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.adjustBalance(ACCOUNT_ID, BigDecimal.TEN))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("throws when the linked parent account is missing")
+        void missingLinkedParentThrows() {
+            UUID parentId = UUID.randomUUID();
+            Account child = new Account(ACCOUNT_ID, USER_ID, "Yape", AccountType.WALLET,
+                    null, "PEN", BigDecimal.ZERO, null, null, null,
+                    "#FFF", false, true, parentId, Instant.now(), Instant.now());
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(child));
+            when(accountRepository.findById(parentId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.adjustBalance(ACCOUNT_ID, BigDecimal.TEN))
+                    .isInstanceOf(AccountNotFoundException.class);
+
+            verify(accountRepository, never()).save(any());
+        }
+    }
+
+    private Account creditCard(BigDecimal balance, BigDecimal creditLimit) {
+        Instant now = Instant.now();
+        return new Account(ACCOUNT_ID, USER_ID, "Visa", AccountType.CREDIT_CARD,
+                "BCP", "PEN", balance, creditLimit, 6, 26,
+                "#FF0000", false, true, null, now, now);
     }
 }

@@ -1,11 +1,14 @@
 package com.finanzasia.application.service;
 
+import com.finanzasia.domain.exceptions.AccountNotFoundException;
 import com.finanzasia.domain.exceptions.CategoryNotFoundException;
 import com.finanzasia.domain.exceptions.InvalidTransactionException;
+import com.finanzasia.domain.exceptions.TagNotFoundException;
 import com.finanzasia.domain.exceptions.TransactionNotFoundException;
 import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.Category;
+import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.model.Transaction;
 import com.finanzasia.domain.model.TransactionDetail;
 import com.finanzasia.domain.model.TransactionType;
@@ -385,5 +388,229 @@ class TransactionServiceTest {
             assertThatThrownBy(() -> service.getTransaction(USER_ID, TX_ID))
                     .isInstanceOf(TransactionNotFoundException.class);
         }
+    }
+
+    // ------------------------------------------------------------------
+    // validateOwnership
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("ownership validation")
+    class OwnershipValidation {
+
+        @Test
+        @DisplayName("EXPENSE without an account is rejected")
+        void expenseWithoutAccountRejected() {
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", null, null, null, CATEGORY_ID,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("accountId is required");
+        }
+
+        @Test
+        @DisplayName("INCOME without an account is rejected")
+        void incomeWithoutAccountRejected() {
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.INCOME,
+                    AMOUNT, "PEN", null, null, null, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("accountId is required");
+        }
+
+        @Test
+        @DisplayName("EXPENSE without a category is rejected")
+        void expenseWithoutCategoryRejected() {
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("categoryId is required");
+        }
+
+        @Test
+        @DisplayName("INCOME does not require a category")
+        void incomeDoesNotRequireCategory() {
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            TransactionDetail result = service.createTransaction(USER_ID, TransactionType.INCOME,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, null,
+                    null, null, TODAY, null, null);
+
+            assertThat(result.transaction().getCategoryId()).isNull();
+        }
+
+        @Test
+        @DisplayName("TRANSFER without a source account is rejected")
+        void transferWithoutFromRejected() {
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "PEN", null, null, TO_ACCOUNT_ID, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("fromAccountId is required");
+        }
+
+        @Test
+        @DisplayName("TRANSFER without a destination account is rejected")
+        void transferWithoutToRejected() {
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "PEN", null, FROM_ACCOUNT_ID, null, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("toAccountId is required");
+        }
+
+        @Test
+        @DisplayName("TRANSFER to the same account is rejected")
+        void transferToSameAccountRejected() {
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "PEN", null, FROM_ACCOUNT_ID, FROM_ACCOUNT_ID, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("same account");
+        }
+
+        @Test
+        @DisplayName("TRANSFER rejects a destination the user does not own")
+        void transferRejectsUnownedDestination() {
+            when(accountRepository.findByIdAndUser(FROM_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(FROM_ACCOUNT_ID)));
+            when(accountRepository.findByIdAndUser(TO_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "PEN", null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("EXPENSE rejects a category the user does not own")
+        void expenseRejectsUnownedCategory() {
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // tag resolution
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("tag resolution")
+    class TagResolution {
+
+        @Test
+        @DisplayName("attaches tags the user owns")
+        void attachesOwnedTags() {
+            UUID tagId = UUID.randomUUID();
+            stubExpenseCreate();
+            when(tagRepository.findByIdsAndUserId(java.util.Set.of(tagId), USER_ID))
+                    .thenReturn(java.util.List.of(new Tag(tagId, USER_ID, "deducible", "#FFF")));
+
+            TransactionDetail result = service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, java.util.List.of(tagId), null);
+
+            assertThat(result.transaction().getTags()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("rejects a tag the user does not own")
+        void rejectsUnownedTag() {
+            UUID tagId = UUID.randomUUID();
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            when(tagRepository.findByIdsAndUserId(java.util.Set.of(tagId), USER_ID))
+                    .thenReturn(java.util.List.of());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, java.util.List.of(tagId), null))
+                    .isInstanceOf(TagNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("an empty tag list attaches nothing")
+        void emptyTagListAttachesNothing() {
+            stubExpenseCreate();
+
+            TransactionDetail result = service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, java.util.List.of(), null);
+
+            assertThat(result.transaction().getTags()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("deduplicates repeated tag ids before lookup")
+        void deduplicatesRepeatedTagIds() {
+            UUID tagId = UUID.randomUUID();
+            stubExpenseCreate();
+            when(tagRepository.findByIdsAndUserId(java.util.Set.of(tagId), USER_ID))
+                    .thenReturn(java.util.List.of(new Tag(tagId, USER_ID, "deducible", "#FFF")));
+
+            service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, java.util.List.of(tagId, tagId), null);
+
+            // The duplicate collapses, so the single owned tag satisfies the size check.
+            verify(tagRepository).findByIdsAndUserId(java.util.Set.of(tagId), USER_ID);
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // linked account resolution during conversion
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("conversion resolves a linked account to its parent for the currency check")
+    void conversionFollowsLinkedAccountToParent() {
+        UUID parentId = UUID.randomUUID();
+        Instant now = Instant.now();
+        Account child = new Account(ACCOUNT_ID, USER_ID, "Yape", AccountType.WALLET,
+                null, "PEN", BigDecimal.ZERO, null, null, null,
+                null, false, true, parentId, now, now);
+        Account parent = buildAccount(parentId);
+
+        when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID)).thenReturn(Optional.of(child));
+        when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+        when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(child));
+        when(accountRepository.findById(parentId)).thenReturn(Optional.of(parent));
+        when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        TransactionDetail result = service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                null, null, TODAY, null, null);
+
+        // Parent is PEN and the transaction is PEN, so no conversion is applied.
+        assertThat(result.transaction().getAmountLocal()).isNull();
+    }
+
+    private void stubExpenseCreate() {
+        when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+        when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+        when(accountRepository.findById(ACCOUNT_ID))
+                .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+        when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 }

@@ -152,4 +152,41 @@ class TagServiceTest {
         assertThatThrownBy(() -> tagService.deleteTag(userId, tagId))
                 .isInstanceOf(TagNotFoundException.class);
     }
+
+    @Test
+    void updateTagRejectsANameAlreadyUsedByAnotherTag() {
+        Tag existing = new Tag(tagId, userId, "viaje", "#FFF");
+        when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.of(existing));
+        when(tagRepository.existsByUserIdAndName(userId, "deducible")).thenReturn(true);
+
+        assertThatThrownBy(() -> tagService.updateTag(userId, tagId, "Deducible", null))
+                .isInstanceOf(DuplicateTagException.class);
+
+        verify(tagRepository, never()).save(any());
+    }
+
+    @Test
+    void updateTagKeepsTheCurrentNameWhenNoneIsSupplied() {
+        Tag existing = new Tag(tagId, userId, "viaje", "#FFF");
+        when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.of(existing));
+        when(tagRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Tag result = tagService.updateTag(userId, tagId, null, "#000");
+
+        // Name unchanged means no duplicate lookup is warranted.
+        assertThat(result.name()).isEqualTo("viaje");
+        assertThat(result.color()).isEqualTo("#000");
+        verify(tagRepository, never()).existsByUserIdAndName(any(), any());
+    }
+
+    @Test
+    void updateTagKeepsTheCurrentColourWhenNoneIsSupplied() {
+        Tag existing = new Tag(tagId, userId, "viaje", "#FFF");
+        when(tagRepository.findByIdAndUserId(tagId, userId)).thenReturn(Optional.of(existing));
+        when(tagRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+        Tag result = tagService.updateTag(userId, tagId, null, null);
+
+        assertThat(result.color()).isEqualTo("#FFF");
+    }
 }

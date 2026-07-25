@@ -4,6 +4,7 @@ import com.finanzasia.domain.exceptions.InvalidCredentialsException;
 import com.finanzasia.domain.exceptions.InvalidTokenException;
 import com.finanzasia.domain.exceptions.UserAlreadyExistsException;
 import com.finanzasia.domain.model.AuthTokens;
+import com.finanzasia.domain.model.AuthenticatedUser;
 import com.finanzasia.domain.model.User;
 import com.finanzasia.domain.port.out.TokenProvider;
 import com.finanzasia.domain.port.out.TokenStore;
@@ -285,6 +286,57 @@ class AuthServiceTest {
             authService.logout("garbage");
 
             verify(tokenStore, never()).invalidateRefreshToken(anyString());
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // authenticate
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("authenticate")
+    class Authenticate {
+
+        @Test
+        @DisplayName("returns the caller for a valid access token")
+        void validTokenReturnsCaller() {
+            AuthenticatedUser caller =
+                    new AuthenticatedUser(UUID.randomUUID(), "user@test.com");
+            when(tokenProvider.parseAccessToken("good-token")).thenReturn(caller);
+
+            assertThat(authService.authenticate("good-token")).contains(caller);
+        }
+
+        @Test
+        @DisplayName("returns empty for a null token")
+        void nullTokenReturnsEmpty() {
+            assertThat(authService.authenticate(null)).isEmpty();
+            verify(tokenProvider, never()).parseAccessToken(anyString());
+        }
+
+        @Test
+        @DisplayName("returns empty for a blank token")
+        void blankTokenReturnsEmpty() {
+            assertThat(authService.authenticate("   ")).isEmpty();
+            verify(tokenProvider, never()).parseAccessToken(anyString());
+        }
+
+        @Test
+        @DisplayName("returns empty rather than throwing on an invalid token")
+        void invalidTokenReturnsEmpty() {
+            when(tokenProvider.parseAccessToken("bad"))
+                    .thenThrow(new InvalidTokenException("malformed"));
+
+            assertThat(authService.authenticate("bad")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("returns empty when the token subject is not a UUID")
+        void nonUuidSubjectReturnsEmpty() {
+            when(tokenProvider.parseAccessToken("weird"))
+                    .thenThrow(new IllegalArgumentException("not a uuid"));
+
+            assertThat(authService.authenticate("weird")).isEmpty();
         }
     }
 }
