@@ -314,6 +314,17 @@ class CategoryServiceTest {
         }
 
         @Test
+        @DisplayName("updateCategory rejects a category the user does not own")
+        void updateUnownedCategoryThrows() {
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() ->
+                    service.updateCategory(USER_ID, CATEGORY_ID, "Nuevo", null, null, null))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
         @DisplayName("updateCategory rejects a blank name")
         void updateWithBlankNameThrows() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);

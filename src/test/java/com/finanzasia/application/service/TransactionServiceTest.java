@@ -11,6 +11,9 @@ import com.finanzasia.domain.model.Category;
 import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.model.Transaction;
 import com.finanzasia.domain.model.TransactionDetail;
+import com.finanzasia.domain.model.TransactionDetailPage;
+import com.finanzasia.domain.model.TransactionFilter;
+import com.finanzasia.domain.model.TransactionPage;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.model.ExchangeRate;
 import com.finanzasia.domain.port.in.GetTodayExchangeRateUseCase;
@@ -29,7 +32,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -37,6 +42,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -612,5 +618,206 @@ class TransactionServiceTest {
         when(accountRepository.findById(ACCOUNT_ID))
                 .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
         when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+    }
+
+    // ------------------------------------------------------------------
+    // listTransactions
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("listTransactions")
+    class ListTransactions {
+
+        private TransactionFilter filter() {
+            return new TransactionFilter(USER_ID, null, null, null, null, null,
+                    null, null, null, null, 20);
+        }
+
+        @Test
+        @DisplayName("resolves account and category references onto each item")
+        void resolvesReferences() {
+            Transaction tx = buildTransaction(TX_ID, TransactionType.EXPENSE,
+                    ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
+            when(transactionRepository.findWithFilter(any()))
+                    .thenReturn(new TransactionPage(List.of(tx), "next", true));
+            when(accountRepository.findAllByUser(USER_ID))
+                    .thenReturn(List.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findAllByUser(USER_ID))
+                    .thenReturn(List.of(buildCategory(CATEGORY_ID)));
+
+            TransactionDetailPage page = service.listTransactions(filter());
+
+            assertThat(page.items()).hasSize(1);
+            assertThat(page.items().get(0).account().getId()).isEqualTo(ACCOUNT_ID);
+            assertThat(page.items().get(0).category().getId()).isEqualTo(CATEGORY_ID);
+            assertThat(page.nextCursor()).isEqualTo("next");
+            assertThat(page.hasMore()).isTrue();
+        }
+
+        @Test
+        @DisplayName("leaves references null when the transaction carries no id for them")
+        void leavesAbsentReferencesNull() {
+            Transaction tx = buildTransaction(TX_ID, TransactionType.INCOME,
+                    ACCOUNT_ID, null, null, null, AMOUNT);
+            when(transactionRepository.findWithFilter(any()))
+                    .thenReturn(new TransactionPage(List.of(tx), null, false));
+            when(accountRepository.findAllByUser(USER_ID))
+                    .thenReturn(List.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+
+            TransactionDetailPage page = service.listTransactions(filter());
+
+            assertThat(page.items().get(0).category()).isNull();
+            assertThat(page.items().get(0).fromAccount()).isNull();
+            assertThat(page.items().get(0).toAccount()).isNull();
+        }
+
+        @Test
+        @DisplayName("resolves both sides of a transfer")
+        void resolvesTransferSides() {
+            Transaction tx = buildTransaction(TX_ID, TransactionType.TRANSFER,
+                    null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null, AMOUNT);
+            when(transactionRepository.findWithFilter(any()))
+                    .thenReturn(new TransactionPage(List.of(tx), null, false));
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(
+                    buildAccount(FROM_ACCOUNT_ID), buildAccount(TO_ACCOUNT_ID)));
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+
+            TransactionDetailPage page = service.listTransactions(filter());
+
+            assertThat(page.items().get(0).fromAccount().getId()).isEqualTo(FROM_ACCOUNT_ID);
+            assertThat(page.items().get(0).toAccount().getId()).isEqualTo(TO_ACCOUNT_ID);
+        }
+
+        @Test
+        @DisplayName("returns an empty page when nothing matches")
+        void emptyPage() {
+            when(transactionRepository.findWithFilter(any()))
+                    .thenReturn(new TransactionPage(List.of(), null, false));
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+
+            assertThat(service.listTransactions(filter()).items()).isEmpty();
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // getTransaction happy path
+    // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("getTransaction returns the transaction with its references resolved")
+    void getTransactionResolvesReferences() {
+        Transaction tx = buildTransaction(TX_ID, TransactionType.EXPENSE,
+                ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
+        when(transactionRepository.findByIdAndUser(TX_ID, USER_ID)).thenReturn(Optional.of(tx));
+        when(accountRepository.findAllByUser(USER_ID))
+                .thenReturn(List.of(buildAccount(ACCOUNT_ID)));
+        when(categoryRepository.findAllByUser(USER_ID))
+                .thenReturn(List.of(buildCategory(CATEGORY_ID)));
+
+        TransactionDetail result = service.getTransaction(USER_ID, TX_ID);
+
+        assertThat(result.transaction().getId()).isEqualTo(TX_ID);
+        assertThat(result.account().getId()).isEqualTo(ACCOUNT_ID);
+        assertThat(result.category().getId()).isEqualTo(CATEGORY_ID);
+    }
+
+    // ------------------------------------------------------------------
+    // updateTransaction
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("updateTransaction extras")
+    class UpdateTransactionExtras {
+
+        @Test
+        @DisplayName("throws when the transaction does not belong to the user")
+        void unknownTransactionThrows() {
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.updateTransaction(USER_ID, TX_ID, AMOUNT, "PEN",
+                    ACCOUNT_ID, null, null, CATEGORY_ID, null, null, TODAY, null, null))
+                    .isInstanceOf(TransactionNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("clearing the category on an EXPENSE is rejected")
+        void clearingCategoryOnExpenseRejected() {
+            Transaction existing = buildTransaction(TX_ID, TransactionType.EXPENSE,
+                    ACCOUNT_ID, null, null, null, AMOUNT);
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+
+            assertThatThrownBy(() -> service.updateTransaction(USER_ID, TX_ID, AMOUNT, "PEN",
+                    ACCOUNT_ID, null, null, null, null, null, TODAY, null, null))
+                    .isInstanceOf(InvalidTransactionException.class)
+                    .hasMessageContaining("categoryId is required");
+        }
+
+        @Test
+        @DisplayName("replaces the tag set when tagIds are supplied")
+        void replacesTagsWhenSupplied() {
+            UUID tagId = UUID.randomUUID();
+            stubUpdateExpense();
+            when(tagRepository.findByIdsAndUserId(Set.of(tagId), USER_ID))
+                    .thenReturn(List.of(new Tag(tagId, USER_ID, "viaje", "#FFF")));
+
+            TransactionDetail result = service.updateTransaction(USER_ID, TX_ID, AMOUNT, "PEN",
+                    ACCOUNT_ID, null, null, CATEGORY_ID, null, null, TODAY,
+                    List.of(tagId), null);
+
+            assertThat(result.transaction().getTags()).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("stores a user-confirmed amountLocal and re-saves it")
+        void storesConfirmedAmountLocal() {
+            stubUpdateExpense();
+
+            service.updateTransaction(USER_ID, TX_ID, AMOUNT, "PEN",
+                    ACCOUNT_ID, null, null, CATEGORY_ID, null, null, TODAY, null,
+                    BigDecimal.valueOf(374.00));
+
+            // Once for the main save, once because amountLocal was set.
+            verify(transactionRepository, times(2)).save(any());
+        }
+
+        @Test
+        @DisplayName("reverses the previous INCOME effect before applying the new one")
+        void reversesIncomeEffect() {
+            Transaction existing = buildTransaction(TX_ID, TransactionType.INCOME,
+                    ACCOUNT_ID, null, null, null, AMOUNT);
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.updateTransaction(USER_ID, TX_ID, AMOUNT, "PEN",
+                    ACCOUNT_ID, null, null, null, null, null, TODAY, null, null);
+
+            // Reversal debits what the original income credited.
+            verify(accountService).adjustBalance(ACCOUNT_ID, AMOUNT.negate());
+        }
+
+        private void stubUpdateExpense() {
+            Transaction existing = buildTransaction(TX_ID, TransactionType.EXPENSE,
+                    ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        }
     }
 }

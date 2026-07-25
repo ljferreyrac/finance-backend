@@ -638,4 +638,57 @@ class ReportServiceTest {
                     .thenReturn(List.of());
         }
     }
+
+    // ------------------------------------------------------------------
+    // yearly top merchants and percentage edge case
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("yearly extras")
+    class YearlyExtras {
+
+        @Test
+        @DisplayName("maps top merchant rows into the report")
+        void mapsTopMerchantRows() {
+            when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(BigDecimal.valueOf(500));
+            when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(5L);
+            when(reportRepository.monthBreakdownByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG)).thenReturn(List.of());
+            when(reportRepository.categoryBreakdownByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG)).thenReturn(List.of());
+            when(reportRepository.topMerchantsByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(List.of(merchantRow("Wong", BigDecimal.valueOf(300), 3L)));
+
+            YearlyReport report = service.getYearlyReport(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG);
+
+            assertThat(report.topMerchants()).hasSize(1);
+            assertThat(report.topMerchants().get(0).name()).isEqualTo("Wong");
+            assertThat(report.topMerchants().get(0).count()).isEqualTo(3L);
+        }
+
+        @Test
+        @DisplayName("reports 0% rather than dividing by zero when the year total is zero")
+        void zeroTotalYieldsZeroPercent() {
+            when(reportRepository.sumByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(BigDecimal.ZERO);
+            when(reportRepository.countByYear(USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(0L);
+            when(reportRepository.monthBreakdownByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG)).thenReturn(List.of());
+            when(reportRepository.categoryBreakdownByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG))
+                    .thenReturn(List.of(categoryRow("Comida", BigDecimal.ZERO, 0L)));
+            when(reportRepository.topMerchantsByYear(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG)).thenReturn(List.of());
+
+            YearlyReport report = service.getYearlyReport(
+                    USER_ID, 2026, PEN, NO_ACCOUNT, NO_CATEGORY, NO_TAG);
+
+            assertThat(report.byCategory().get(0).percentage()).isZero();
+        }
+    }
 }

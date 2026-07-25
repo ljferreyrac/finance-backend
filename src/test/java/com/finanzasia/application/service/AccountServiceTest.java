@@ -286,6 +286,29 @@ class AccountServiceTest {
         }
 
         @Test
+        @DisplayName("subtracts the credit limit as debt when includeDebt is on")
+        void getNetWorthCreditCardWithLimitSubtractsDebt() {
+            Account card = creditCard(BigDecimal.valueOf(200), BigDecimal.valueOf(1000));
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(card));
+
+            NetWorth result = service.getNetWorth(USER_ID, true);
+
+            // balance - limit = 200 - 1000
+            assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.valueOf(-800));
+        }
+
+        @Test
+        @DisplayName("skips credit cards entirely when includeDebt is off")
+        void getNetWorthExcludesCreditCardsWhenDebtOff() {
+            Account card = creditCard(BigDecimal.valueOf(200), BigDecimal.valueOf(1000));
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(card));
+
+            NetWorth result = service.getNetWorth(USER_ID, false);
+
+            assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.ZERO);
+        }
+
+        @Test
         @DisplayName("treats a credit card with no limit set as its plain balance")
         void getNetWorthCreditCardWithoutLimitUsesBalance() {
             Account card = creditCard(BigDecimal.valueOf(-300), null);
