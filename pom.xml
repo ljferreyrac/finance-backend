@@ -223,15 +223,21 @@
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
+                                    <!-- Ratchet, not a target. Each minimum sits at the
+                                         coverage actually achieved, so the numbers can only
+                                         go up: any change that uncovers a line or branch
+                                         fails the build. Raise these as tests land. The goal
+                                         is 100%; 80% is the CLAUDE.md floor, not the aim. -->
                                     <limits>
-                                        <!-- Measured at 88.1% on main; 80% is the CLAUDE.md rule. -->
+                                        <!-- Actual: 88.13% (527/598 lines). -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.80</minimum>
+                                            <minimum>0.88</minimum>
                                         </limit>
-                                        <!-- Measured at 65.9%. Floor holds the line while the
-                                             gap closes; raise toward 0.80 as branch tests land. -->
+                                        <!-- Actual: 65.91% (145/220 branches). 75 branches
+                                             short of 100%, 52 of them in TransactionService
+                                             and AccountService. -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
