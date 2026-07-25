@@ -177,7 +177,10 @@ public class GeminiExtractionService implements AIExtractionPort {
             String jsonArray = textNode.asText();
             return objectMapper.readValue(jsonArray, new TypeReference<List<AITransactionRaw>>() {});
 
-        } catch (JsonProcessingException ex) {
+        } catch (JsonProcessingException | IllegalArgumentException ex) {
+            // IllegalArgumentException covers a null/empty responseBody: readTree(null) throws
+            // that directly rather than a JsonProcessingException, so without this it would
+            // escape unwrapped instead of mapping to the intended 502 AIExtractionException.
             LOG.error("Failed to parse Gemini response: {}", ex.getMessage());
             throw new AIExtractionException("AI returned a response that could not be parsed.", ex);
         }
