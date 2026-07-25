@@ -29,8 +29,10 @@ jobs:
       # Runs before the full build so a boundary break fails fast under its own
       # name, instead of being one red line among all the other tests. These
       # rules only read compiled classes, so they need no secrets or database.
+      # jacoco.skip avoids merging this run's exec data into the verify step's
+      # coverage report (the agent appends by default).
       - name: Verify hexagonal architecture boundaries
-        run: mvn test -Dtest=ArchitectureTest -DfailIfNoTests=false -Dcheckstyle.skip=true -Dspotbugs.skip=true
+        run: mvn test -Dtest=ArchitectureTest -DfailIfNoTests=false -Dcheckstyle.skip=true -Dspotbugs.skip=true -Djacoco.skip=true
 
       - name: Run tests, checkstyle and spotbugs
         env:
@@ -41,3 +43,37 @@ jobs:
           DB_USERNAME: postgres
           DB_PASSWORD: postgres
         run: mvn verify
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+          retention-days: 14
+
+      - name: Report coverage
+        if: always()
+        run: |
+          python3 - <<'PY' >> "$GITHUB_STEP_SUMMARY"
+          import csv, collections
+          rows = list(csv.DictReader(open('target/site/jacoco/jacoco.csv')))
+          tot = [0, 0, 0, 0]
+          agg = collections.defaultdict(lambda: [0, 0, 0, 0])
+          for r in rows:
+              v = [int(r['LINE_MISSED']), int(r['LINE_COVERED']),
+                   int(r['BRANCH_MISSED']), int(r['BRANCH_COVERED'])]
+              for i in range(4):
+                  agg[r['PACKAGE']][i] += v[i]
+                  tot[i] += v[i]
+          def pct(m, c):
+              return '%.2f%% (%d/%d)' % (100 * c / (m + c), c, m + c) if m + c else 'n/a'
+          print('## Coverage\n')
+          print('| Package | Line | Branch |')
+          print('| --- | --- | --- |')
+          for p in sorted(agg):
+              lm, lc, bm, bc = agg[p]
+              print('| `%s` | %s | %s |' % (p, pct(lm, lc), pct(bm, bc)))
+          lm, lc, bm, bc = tot
+          print('| **TOTAL** | **%s** | **%s** |' % (pct(lm, lc), pct(bm, bc)))
+          PY
