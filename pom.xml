@@ -259,6 +259,44 @@
                             </rules>
                         </configuration>
                     </execution>
+
+                    <execution>
+                        <id>check-project-floor</id>
+                        <phase>verify</phase>
+                        <goals><goal>check</goal></goals>
+                        <configuration>
+                            <!-- Deliberately no <includes>: this rule measures every class,
+                                 unlike check-application-layer which filters to the 9 services. -->
+                            <rules>
+                                <rule>
+                                    <element>BUNDLE</element>
+                                    <!-- Ratchet toward the real goal of 0.90 across the whole
+                                         codebase. Each number is the coverage actually achieved,
+                                         so overall coverage can only go up. Raise both after every
+                                         phase of the coverage plan; never lower either one.
+
+                                         Note: JaCoCo rounds the measured ratio to the scale of the
+                                         declared minimum before comparing, so a minimum of 0.40
+                                         carries about half a point of slack (e.g. 0.3951 rounds up
+                                         and passes). Fine for a floor meant to stop decay. -->
+                                    <limits>
+                                        <!-- Achieved: 40.37% (847/2098). Target: 0.90. -->
+                                        <limit>
+                                            <counter>LINE</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.40</minimum>
+                                        </limit>
+                                        <!-- Achieved: 59.16% (226/382). Target: 0.90. -->
+                                        <limit>
+                                            <counter>BRANCH</counter>
+                                            <value>COVEREDRATIO</value>
+                                            <minimum>0.59</minimum>
+                                        </limit>
+                                    </limits>
+                                </rule>
+                            </rules>
+                        </configuration>
+                    </execution>
                 </executions>
             </plugin>
 
