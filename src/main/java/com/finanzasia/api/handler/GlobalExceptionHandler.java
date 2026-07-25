@@ -27,6 +27,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -194,6 +195,19 @@ public class GlobalExceptionHandler {
         ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.BAD_GATEWAY);
         pd.setTitle("AI Extraction Failed");
         pd.setDetail("The AI service could not process your request. Please try again.");
+        return pd;
+    }
+
+    /**
+     * Spring throws this for any request matching no handler and no static resource. Without
+     * this handler it falls into the {@link Exception} catch-all below and every unmapped route
+     * would report as a 500 Internal Server Error instead of a 404.
+     */
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ProblemDetail handleNoResourceFound(NoResourceFoundException ex) {
+        ProblemDetail pd = ProblemDetail.forStatus(HttpStatus.NOT_FOUND);
+        pd.setTitle("Not Found");
+        pd.setDetail("The requested resource was not found.");
         return pd;
     }
 
