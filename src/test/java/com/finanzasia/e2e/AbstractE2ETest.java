@@ -1,8 +1,10 @@
 package com.finanzasia.e2e;
 
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -14,6 +16,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.util.Map;
+import java.util.Set;
 
 /**
  * Base class for end-to-end tests: real HTTP through the full stack (filters, controller,
@@ -55,6 +58,21 @@ abstract class AbstractE2ETest {
     @Autowired
     protected TestRestTemplate restTemplate;
 
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    // RateLimitFilter's counters live in the same singleton Redis every test class shares, keyed
+    // per client IP with windows up to an hour (register: 5/hour). Without this, a suite this
+    // size trips real 429s from the second or third test class onward - the limiter doing its
+    // job correctly against a test run it was never scoped for, not a bug in the limiter itself.
+    @BeforeEach
+    void resetRateLimits() {
+        Set<String> keys = redisTemplate.keys("ratelimit:*");
+        if (keys != null && !keys.isEmpty()) {
+            redisTemplate.delete(keys);
+        }
+    }
+
     protected static <T> HttpEntity<T> jsonBody(T body) {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -92,6 +110,11 @@ abstract class AbstractE2ETest {
         String email = emailPrefix + "-" + java.util.UUID.randomUUID() + "@example.com";
         var response = restTemplate.postForEntity(
                 "/api/v1/auth/register", jsonBody(RegisterPayload.of(email)), Map.class);
+        if (!response.getStatusCode().is2xxSuccessful()) {
+            throw new IllegalStateException(
+                    "registerAndLogin fixture failed: expected 201 but got "
+                            + response.getStatusCode() + " - body: " + response.getBody());
+        }
         Map<?, ?> body = response.getBody();
         return new TokenPair(
                 (String) body.get("accessToken"),
