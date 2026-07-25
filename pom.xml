@@ -276,23 +276,23 @@
                                          phase of the coverage plan; never lower either one.
 
                                          Note: JaCoCo rounds the measured ratio to the scale of the
-                                         declared minimum before comparing, so a minimum of 0.55
-                                         carries about half a point of slack (e.g. 0.5451 rounds up
+                                         declared minimum before comparing, so a minimum of 0.74
+                                         carries about half a point of slack (e.g. 0.7351 rounds up
                                          and passes). Fine for a floor meant to stop decay. -->
                                     <limits>
-                                        <!-- Achieved after Phase 1 (unit tests: exception handler,
-                                             JwtService, domain.model, domain.exceptions, api.dto):
-                                             55.00% (1154/2098). Target: 0.90. -->
+                                        <!-- Achieved after Phase 2 (infrastructure.persistence
+                                             mappers and JPA adapters, on top of Phase 1's unit
+                                             tests): 74.59% (1565/2098). Target: 0.90. -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.55</minimum>
+                                            <minimum>0.74</minimum>
                                         </limit>
-                                        <!-- Achieved: 65.45% (250/382). Target: 0.90. -->
+                                        <!-- Achieved: 73.56% (281/382). Target: 0.90. -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.65</minimum>
+                                            <minimum>0.73</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
