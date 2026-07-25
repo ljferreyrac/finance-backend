@@ -335,6 +335,21 @@ class CategoryServiceTest {
         }
 
         @Test
+        @DisplayName("updateCategory skips the duplicate check when the name is unchanged")
+        void updateWithSameNameSkipsDuplicateCheck() {
+            Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(categoryRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            CategoryDetail result =
+                    service.updateCategory(USER_ID, CATEGORY_ID, "Comida", "#000", null, null);
+
+            assertThat(result.category().getName()).isEqualTo("Comida");
+            verify(categoryRepository, never()).existsByUserAndName(any(), any());
+        }
+
+        @Test
         @DisplayName("updateCategory rejects a blank name")
         void updateWithBlankNameThrows() {
             Category existing = buildCategory(CATEGORY_ID, USER_ID, "Comida", false);

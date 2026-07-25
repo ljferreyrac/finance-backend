@@ -907,8 +907,12 @@ class TransactionServiceTest {
         @Test
         @DisplayName("names the first unowned tag when only some of the ids are owned")
         void reportsFirstMissingTagOnPartialMatch() {
-            UUID ownedTag = UUID.randomUUID();
-            UUID foreignTag = UUID.randomUUID();
+            // Fixed ids, not random: resolveTagsForUser scans a HashSet, and the
+            // owned id has to be visited before the unowned one for the "already
+            // found" path to be exercised at all. These two hash into buckets 0
+            // and 1 respectively, so the order is stable rather than incidental.
+            UUID ownedTag = UUID.fromString("11111111-1111-1111-1111-111111111111");
+            UUID foreignTag = UUID.fromString("00000001-2222-2222-2222-222222222222");
             when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
                     .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
@@ -940,6 +944,85 @@ class TransactionServiceTest {
 
             verify(accountService).adjustBalance(FROM_ACCOUNT_ID, AMOUNT.negate());
             verify(accountService).adjustBalance(TO_ACCOUNT_ID, received);
+        }
+    }
+
+    @Nested
+    @DisplayName("partial update")
+    class PartialUpdate {
+
+        @Test
+        @DisplayName("omitted fields keep their existing values")
+        void omittedFieldsKeepExistingValues() {
+            Transaction existing = buildTransaction(TX_ID, TransactionType.EXPENSE,
+                    ACCOUNT_ID, null, null, CATEGORY_ID, AMOUNT);
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            when(accountRepository.findById(ACCOUNT_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            // Every optional field null: amount, currency, ids and date must survive.
+            TransactionDetail result = service.updateTransaction(USER_ID, TX_ID,
+                    null, null, null, null, null, null, null, null, null, null, null);
+
+            assertThat(result.transaction().getAmount()).isEqualByComparingTo(AMOUNT);
+            assertThat(result.transaction().getCurrency()).isEqualTo("PEN");
+            assertThat(result.transaction().getAccountId()).isEqualTo(ACCOUNT_ID);
+            assertThat(result.transaction().getCategoryId()).isEqualTo(CATEGORY_ID);
+            assertThat(result.transaction().getTransactionDate()).isEqualTo(TODAY);
+        }
+
+        @Test
+        @DisplayName("reversing a cross-currency transfer debits the stored received amount")
+        void reversesCrossCurrencyTransferUsingStoredAmountLocal() {
+            Instant now = Instant.now();
+            Transaction existing = new Transaction(TX_ID, USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "USD", null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null,
+                    "Merchant", "Desc", null, TODAY, now, now, null,
+                    List.of(), null, BigDecimal.valueOf(374.00));
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(FROM_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(FROM_ACCOUNT_ID)));
+            when(accountRepository.findByIdAndUser(TO_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(TO_ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            service.updateTransaction(USER_ID, TX_ID, null, null, null, null, null, null,
+                    null, null, null, null, null);
+
+            // The reversal must undo the 374.00 that was actually credited.
+            verify(accountService).adjustBalance(TO_ACCOUNT_ID, BigDecimal.valueOf(374.00).negate());
+        }
+    
+        @Test
+        @DisplayName("a transfer can be repointed at different accounts")
+        void transferCanBeRepointed() {
+            UUID newFrom = UUID.randomUUID();
+            UUID newTo = UUID.randomUUID();
+            Transaction existing = buildTransaction(TX_ID, TransactionType.TRANSFER,
+                    null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null, AMOUNT);
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.findByIdAndUser(newFrom, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(newFrom)));
+            when(accountRepository.findByIdAndUser(newTo, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(newTo)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            TransactionDetail result = service.updateTransaction(USER_ID, TX_ID, null, null,
+                    null, newFrom, newTo, null, null, null, null, null, null);
+
+            assertThat(result.transaction().getFromAccountId()).isEqualTo(newFrom);
+            assertThat(result.transaction().getToAccountId()).isEqualTo(newTo);
+            // Old sides are reversed, new sides take the fresh effect.
+            verify(accountService).adjustBalance(FROM_ACCOUNT_ID, AMOUNT);
+            verify(accountService).adjustBalance(newFrom, AMOUNT.negate());
         }
     }
 }

@@ -226,22 +226,33 @@
                                     <!-- Ratchet, not a target. Each minimum sits at the
                                          coverage actually achieved, so the numbers can only
                                          go up: any change that uncovers a line or branch
-                                         fails the build. Raise these as tests land. The goal
-                                         is 100%; 80% is the CLAUDE.md floor, not the aim. -->
+                                         fails the build.
+
+                                         Everything reachable is covered. The shortfall from
+                                         100% is 4 branches and 1 line in TransactionService
+                                         that no test can reach:
+                                           - the isExpense/null-category guard and its throw,
+                                             already rejected by validateOwnership just above
+                                             it, so the second check never fires;
+                                           - the false side of `else if (type == TRANSFER)`,
+                                             unreachable while TransactionType has exactly
+                                             EXPENSE, INCOME and TRANSFER;
+                                           - the synthetic default arm of two exhaustive
+                                             switches over that same enum.
+                                         Adding a fourth transaction type would make the last
+                                         three reachable and should come with tests. -->
                                     <limits>
-                                        <!-- Actual: 88.13% (527/598 lines). -->
+                                        <!-- Actual: 99.83% (597/598 lines). -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.88</minimum>
+                                            <minimum>0.99</minimum>
                                         </limit>
-                                        <!-- Actual: 65.91% (145/220 branches). 75 branches
-                                             short of 100%, 52 of them in TransactionService
-                                             and AccountService. -->
+                                        <!-- Actual: 98.18% (216/220 branches). -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.65</minimum>
+                                            <minimum>0.98</minimum>
                                         </limit>
                                     </limits>
                                 </rule>

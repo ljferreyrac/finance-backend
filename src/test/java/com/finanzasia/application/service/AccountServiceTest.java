@@ -309,6 +309,17 @@ class AccountServiceTest {
         }
 
         @Test
+        @DisplayName("still counts non-credit accounts when includeDebt is off")
+        void getNetWorthKeepsBankAccountsWhenDebtOff() {
+            Account bank = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(250), false);
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of(bank));
+
+            NetWorth result = service.getNetWorth(USER_ID, false);
+
+            assertThat(result.totalPEN()).isEqualByComparingTo(BigDecimal.valueOf(250));
+        }
+
+        @Test
         @DisplayName("treats a credit card with no limit set as its plain balance")
         void getNetWorthCreditCardWithoutLimitUsesBalance() {
             Account card = creditCard(BigDecimal.valueOf(-300), null);
@@ -463,6 +474,18 @@ class AccountServiceTest {
     // ------------------------------------------------------------------
     // account limit
     // ------------------------------------------------------------------
+
+    @Test
+    @DisplayName("createAccount falls back to PEN when no currency is given")
+    void createAccountDefaultsCurrencyToPen() {
+        ArgumentCaptor<Account> captor = ArgumentCaptor.forClass(Account.class);
+        when(accountRepository.save(captor.capture())).thenAnswer(inv -> inv.getArgument(0));
+
+        service.createAccount(USER_ID, "Sin moneda", AccountType.CASH,
+                null, null, BigDecimal.ZERO, null, null, null, "#FFF", false, null);
+
+        assertThat(captor.getValue().getCurrency()).isEqualTo("PEN");
+    }
 
     @Test
     @DisplayName("createAccount rejects once the per-user account limit is reached")

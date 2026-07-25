@@ -423,4 +423,63 @@ class ExtractTransactionsServiceTest {
                     null, null, "Wong", null, "2026-03-28", 0.9, tagIds);
         }
     }
+
+    // ------------------------------------------------------------------
+    // sentinel handling in AI output
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("AI sentinels")
+    class AiSentinels {
+
+        @Test
+        @DisplayName("treats a blank id as absent")
+        void blankIdTreatedAsAbsent() {
+            stubEmptyContext();
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithIds("   ", "   ")));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).categoryId()).isNull();
+            assertThat(result.get(0).accountId()).isNull();
+        }
+
+        @Test
+        @DisplayName("treats the literal string null as absent")
+        void literalNullStringTreatedAsAbsent() {
+            stubEmptyContext();
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithIds("null", "NULL")));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).categoryId()).isNull();
+            assertThat(result.get(0).accountId()).isNull();
+        }
+
+        @Test
+        @DisplayName("falls back to today when the date is blank")
+        void blankDateFallsBack() {
+            stubEmptyContext();
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(new AITransactionRaw("EXPENSE", new BigDecimal("10.00"),
+                            "PEN", null, null, "Wong", null, "   ", 0.9, List.of())));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).transactionDate()).isNotNull();
+        }
+
+        private void stubEmptyContext() {
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID)).thenReturn(List.of());
+        }
+
+        private AITransactionRaw rawWithIds(String categoryId, String accountId) {
+            return new AITransactionRaw("EXPENSE", new BigDecimal("10.00"), "PEN",
+                    categoryId, accountId, "Wong", null, "2026-03-28", 0.9, List.of());
+        }
+    }
 }
