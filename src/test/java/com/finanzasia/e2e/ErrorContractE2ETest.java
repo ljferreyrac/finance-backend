@@ -64,7 +64,11 @@ class ErrorContractE2ETest extends AbstractE2ETest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         Map<String, Object> body = response.getBody();
         assertThat(body.get("title")).isEqualTo("User Already Exists");
-        assertThat(body.toString()).doesNotContain("BCrypt").doesNotContainIgnoringCase("stack");
+        // Closed-schema check, not a substring blacklist: this handler adds no extra properties
+        // (see GlobalExceptionHandler.handleUserAlreadyExists), so the body must be exactly
+        // ProblemDetail's fixed fields - anything else (a hash, a driver message, a stack
+        // element) is a field this assertion wasn't told to expect, and fails by not matching.
+        assertThat(body.keySet()).containsExactlyInAnyOrder("type", "title", "status", "detail", "instance");
     }
 
     @Test
