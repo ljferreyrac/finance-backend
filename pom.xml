@@ -270,29 +270,30 @@
                             <rules>
                                 <rule>
                                     <element>BUNDLE</element>
-                                    <!-- Ratchet toward the real goal of 0.90 across the whole
-                                         codebase. Each number is the coverage actually achieved,
-                                         so overall coverage can only go up. Raise both after every
-                                         phase of the coverage plan; never lower either one.
+                                    <!-- Whole-codebase coverage floor. The 0.90 target from the
+                                         coverage plan is met and then some (Phase 4 added
+                                         @WebMvcTest slices for all 8 controllers); this is now a
+                                         real gate, not a ratchet climbing toward a future number.
+                                         Set at the achieved values so it can still only go up.
 
                                          Note: JaCoCo rounds the measured ratio to the scale of the
-                                         declared minimum before comparing, so a minimum of 0.83
-                                         carries about half a point of slack (e.g. 0.8251 rounds up
-                                         and passes). Fine for a floor meant to stop decay. -->
+                                         declared minimum before comparing, so a minimum of 0.97
+                                         carries a little slack (e.g. 0.9651 rounds up and passes).
+                                         Fine for a floor meant to stop decay. -->
                                     <limits>
-                                        <!-- Achieved after Phase 3 (infrastructure.ai,
-                                             infrastructure.redis, api.security filters, on top
-                                             of Phases 1-2): 83.51% (1752/2098). Target: 0.90. -->
+                                        <!-- Achieved after Phase 4 (@WebMvcTest for all 8
+                                             controllers, on top of Phases 1-3): 97.66%
+                                             (2049/2098). -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.83</minimum>
+                                            <minimum>0.97</minimum>
                                         </limit>
-                                        <!-- Achieved: 86.39% (330/382). Target: 0.90. -->
+                                        <!-- Achieved: 96.34% (368/382). -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.86</minimum>
+                                            <minimum>0.96</minimum>
                                         </limit>
                                     </limits>
                                 </rule>
