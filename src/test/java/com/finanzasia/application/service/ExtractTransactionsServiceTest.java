@@ -3,6 +3,7 @@ package com.finanzasia.application.service;
 import com.finanzasia.domain.model.Account;
 import com.finanzasia.domain.model.AccountType;
 import com.finanzasia.domain.model.Category;
+import com.finanzasia.domain.model.Tag;
 import com.finanzasia.domain.model.TransactionDraft;
 import com.finanzasia.domain.model.TransactionType;
 import com.finanzasia.domain.port.out.AIExtractionPort;
@@ -330,6 +331,96 @@ class ExtractTransactionsServiceTest {
 
             assertThat(draft.categoryId()).isEqualTo(CATEGORY_ID);
             assertThat(draft.categoryName()).isEqualTo("Transport");
+        }
+    }
+
+    // ------------------------------------------------------------------
+    // tag context
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("tags")
+    class Tags {
+
+        @Test
+        @DisplayName("passes the user's tags to the AI port as context")
+        void passesTagContext() {
+            UUID tagId = UUID.randomUUID();
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID))
+                    .thenReturn(List.of(new Tag(tagId, USER_ID, "deducible", "#FFF")));
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of());
+
+            service.extract(USER_ID, "algo", null);
+
+            verify(tagRepository).findByUserId(USER_ID);
+        }
+
+        @Test
+        @DisplayName("keeps a tag the AI returned that the user actually owns")
+        void keepsOwnedTag() {
+            UUID tagId = UUID.randomUUID();
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID))
+                    .thenReturn(List.of(new Tag(tagId, USER_ID, "deducible", "#FFF")));
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithTags(List.of(tagId.toString()))));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).tagIds()).containsExactly(tagId);
+        }
+
+        @Test
+        @DisplayName("drops a tag id the AI invented that the user does not own")
+        void dropsUnownedTag() {
+            UUID owned = UUID.randomUUID();
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID))
+                    .thenReturn(List.of(new Tag(owned, USER_ID, "deducible", "#FFF")));
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithTags(List.of(UUID.randomUUID().toString()))));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).tagIds()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("drops an unparseable tag id")
+        void dropsMalformedTagId() {
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithTags(List.of("not-a-uuid"))));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).tagIds()).isEmpty();
+        }
+
+        @Test
+        @DisplayName("treats a null tag list as no tags")
+        void nullTagListYieldsEmpty() {
+            when(categoryRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(accountRepository.findAllByUser(USER_ID)).thenReturn(List.of());
+            when(tagRepository.findByUserId(USER_ID)).thenReturn(List.of());
+            when(aiExtractionPort.extractFromText(any(), anyList(), anyList(), anyList(), any()))
+                    .thenReturn(List.of(rawWithTags(null)));
+
+            List<TransactionDraft> result = service.extract(USER_ID, "algo", null);
+
+            assertThat(result.get(0).tagIds()).isEmpty();
+        }
+
+        private AITransactionRaw rawWithTags(List<String> tagIds) {
+            return new AITransactionRaw("EXPENSE", new BigDecimal("10.00"), "PEN",
+                    null, null, "Wong", null, "2026-03-28", 0.9, tagIds);
         }
     }
 }

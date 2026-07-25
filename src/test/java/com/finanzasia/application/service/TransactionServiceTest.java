@@ -820,4 +820,126 @@ class TransactionServiceTest {
             when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         }
     }
+
+    // ------------------------------------------------------------------
+    // remaining failure and conversion paths
+    // ------------------------------------------------------------------
+
+    @Nested
+    @DisplayName("failure paths")
+    class FailurePaths {
+
+        @Test
+        @DisplayName("EXPENSE rejects an account the user does not own")
+        void expenseRejectsUnownedAccount() {
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("TRANSFER rejects a source account the user does not own")
+        void transferRejectsUnownedSource() {
+            when(accountRepository.findByIdAndUser(FROM_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.TRANSFER,
+                    AMOUNT, "PEN", null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("deleteTransaction throws when the transaction is not the user's")
+        void deleteUnknownTransactionThrows() {
+            when(transactionRepository.findByIdAndUser(TX_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.deleteTransaction(USER_ID, TX_ID))
+                    .isInstanceOf(TransactionNotFoundException.class);
+
+            verify(transactionRepository, never()).softDelete(any(), any());
+        }
+
+        @Test
+        @DisplayName("conversion throws when the account disappears between validation and apply")
+        void conversionMissingAccountThrows() {
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("conversion throws when the linked parent account is missing")
+        void conversionMissingLinkedParentThrows() {
+            UUID parentId = UUID.randomUUID();
+            Instant now = Instant.now();
+            Account child = new Account(ACCOUNT_ID, USER_ID, "Yape", AccountType.WALLET,
+                    null, "PEN", BigDecimal.ZERO, null, null, null,
+                    null, false, true, parentId, now, now);
+
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(child));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+            when(accountRepository.findById(ACCOUNT_ID)).thenReturn(Optional.of(child));
+            when(accountRepository.findById(parentId)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, null, null))
+                    .isInstanceOf(AccountNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("names the first unowned tag when only some of the ids are owned")
+        void reportsFirstMissingTagOnPartialMatch() {
+            UUID ownedTag = UUID.randomUUID();
+            UUID foreignTag = UUID.randomUUID();
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(ACCOUNT_ID)));
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.of(buildCategory(CATEGORY_ID)));
+            // Only one of the two ids comes back, so the loop over `found` runs
+            // before the missing id is identified.
+            when(tagRepository.findByIdsAndUserId(Set.of(ownedTag, foreignTag), USER_ID))
+                    .thenReturn(List.of(new Tag(ownedTag, USER_ID, "viaje", "#FFF")));
+
+            assertThatThrownBy(() -> service.createTransaction(USER_ID, TransactionType.EXPENSE,
+                    AMOUNT, "PEN", ACCOUNT_ID, null, null, CATEGORY_ID,
+                    null, null, TODAY, List.of(ownedTag, foreignTag), null))
+                    .isInstanceOf(TagNotFoundException.class);
+        }
+
+        @Test
+        @DisplayName("cross-currency transfer credits the confirmed received amount")
+        void crossCurrencyTransferCreditsAmountLocal() {
+            when(accountRepository.findByIdAndUser(FROM_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(FROM_ACCOUNT_ID)));
+            when(accountRepository.findByIdAndUser(TO_ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(buildAccount(TO_ACCOUNT_ID)));
+            when(transactionRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            BigDecimal received = BigDecimal.valueOf(374.00);
+            service.createTransaction(USER_ID, TransactionType.TRANSFER, AMOUNT, "USD",
+                    null, FROM_ACCOUNT_ID, TO_ACCOUNT_ID, null,
+                    null, null, TODAY, null, received);
+
+            verify(accountService).adjustBalance(FROM_ACCOUNT_ID, AMOUNT.negate());
+            verify(accountService).adjustBalance(TO_ACCOUNT_ID, received);
+        }
+    }
 }

@@ -387,6 +387,34 @@ class AccountServiceTest {
         private final UUID linkedId = UUID.randomUUID();
 
         @Test
+        @DisplayName("update leaves isActive untouched when null is supplied")
+        void updateWithNullIsActiveKeepsCurrent() {
+            Account existing = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            AccountDetail result = service.updateAccount(USER_ID, ACCOUNT_ID, null, "BBVA",
+                    null, null, null, "#FFF", null, null);
+
+            assertThat(result.account().isActive()).isTrue();
+        }
+
+        @Test
+        @DisplayName("update can deactivate an account")
+        void updateCanDeactivate() {
+            Account existing = buildAccount(ACCOUNT_ID, "PEN", BigDecimal.valueOf(100), false);
+            when(accountRepository.findByIdAndUser(ACCOUNT_ID, USER_ID))
+                    .thenReturn(Optional.of(existing));
+            when(accountRepository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+
+            AccountDetail result = service.updateAccount(USER_ID, ACCOUNT_ID, null, "BBVA",
+                    null, null, null, "#FFF", false, null);
+
+            assertThat(result.account().isActive()).isFalse();
+        }
+
+        @Test
         @DisplayName("create rejects a linked account the user does not own")
         void createRejectsUnknownLinkedAccount() {
             when(accountRepository.countByUser(USER_ID)).thenReturn(1L);

@@ -314,6 +314,16 @@ class CategoryServiceTest {
         }
 
         @Test
+        @DisplayName("deleteCategory rejects a category the user does not own")
+        void deleteUnownedCategoryThrows() {
+            when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
+                    .thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.deleteCategory(USER_ID, CATEGORY_ID, null))
+                    .isInstanceOf(CategoryNotFoundException.class);
+        }
+
+        @Test
         @DisplayName("updateCategory rejects a category the user does not own")
         void updateUnownedCategoryThrows() {
             when(categoryRepository.findByIdAndUser(CATEGORY_ID, USER_ID))
