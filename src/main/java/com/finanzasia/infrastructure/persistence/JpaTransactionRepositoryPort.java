@@ -32,8 +32,8 @@ public interface JpaTransactionRepositoryPort extends JpaRepository<TransactionE
                    OR t.to_account_id = :accountId)
               AND (:categoryId IS NULL OR t.category_id = :categoryId)
               AND (:currency IS NULL OR t.currency = :currency)
-              AND (:from IS NULL OR t.transaction_date >= CAST(:from AS date))
-              AND (:to IS NULL OR t.transaction_date <= CAST(:to AS date))
+              AND (CAST(:from AS date) IS NULL OR t.transaction_date >= CAST(:from AS date))
+              AND (CAST(:to AS date) IS NULL OR t.transaction_date <= CAST(:to AS date))
               AND (:tagId IS NULL OR tt.tag_id IS NOT NULL)
               AND (CAST(:cursorDate AS date) IS NULL OR t.transaction_date < :cursorDate
                    OR (t.transaction_date = :cursorDate AND CAST(t.id AS text) < CAST(:cursorId AS text)))
@@ -65,8 +65,8 @@ public interface JpaTransactionRepositoryPort extends JpaRepository<TransactionE
                    OR t.to_account_id = :accountId)
               AND (:categoryId IS NULL OR t.category_id = :categoryId)
               AND (:currency IS NULL OR t.currency = :currency)
-              AND (:from IS NULL OR t.transaction_date >= CAST(:from AS date))
-              AND (:to IS NULL OR t.transaction_date <= CAST(:to AS date))
+              AND (CAST(:from AS date) IS NULL OR t.transaction_date >= CAST(:from AS date))
+              AND (CAST(:to AS date) IS NULL OR t.transaction_date <= CAST(:to AS date))
               AND (:tagId IS NULL OR tt.tag_id IS NOT NULL)
             """, nativeQuery = true)
     long countWithFilter(

@@ -313,11 +313,13 @@ class JpaReportRepositoryPortTest extends AbstractPostgresTest {
             List<WeekRow> rows = reportPort.findWeekBreakdownByMonth(
                     userId, 2026, 3, "PEN", null, null, null);
 
+            // CEIL(7/7.0) is exactly 1, not 2: day 7 lands in week 1 alongside day 1, not week 2
+            // alone. So the distinct week numbers are still {1,2,4,5}, but week 1 sums d1+d7.
             assertThat(rows).extracting(WeekRow::getWeekNumber).containsExactly(1, 2, 4, 5);
             java.util.Map<Integer, BigDecimal> byWeek = new java.util.HashMap<>();
             rows.forEach(r -> byWeek.put(r.getWeekNumber(), r.getAmount()));
-            assertThat(byWeek.get(1)).isEqualByComparingTo("1.00");
-            assertThat(byWeek.get(2)).isEqualByComparingTo("6.00");
+            assertThat(byWeek.get(1)).isEqualByComparingTo("3.00");
+            assertThat(byWeek.get(2)).isEqualByComparingTo("4.00");
             assertThat(byWeek.get(4)).isEqualByComparingTo("8.00");
             // Days 29 and 31 both fall in week 5 (CEIL(29/7.0)=5, CEIL(31/7.0)=5): 16 + 32.
             assertThat(byWeek.get(5)).isEqualByComparingTo("48.00");

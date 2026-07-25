@@ -147,7 +147,7 @@ final class PersistenceFixtures {
         entity.setBuyRate(buyRate);
         entity.setSellRate(sellRate);
         entity.setRateDate(date);
-        entity.setSource("fixture");
+        entity.setSource("MANUAL");
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         return em.persistFlushFind(entity);
