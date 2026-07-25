@@ -5,6 +5,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -21,6 +22,11 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * {@link com.finanzasia.api.security.PasswordEncoderConfig}'s Javadoc for the
  * fix; this test is the regression guard for it.
  */
+// app.jwt.secret has no default and JwtService derives an HS256 key from it at construction
+// time, which throws for anything under 256 bits - this must not depend on JWT_SECRET actually
+// being configured as a repo secret, since that's a separate, deliberate infra decision, and a
+// wiring test should be hermetic regardless of it.
+@TestPropertySource(properties = "app.jwt.secret=context-test-only-secret-not-for-production-use-minimum-32-bytes")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
 class ApplicationContextTest {
