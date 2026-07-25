@@ -271,7 +271,8 @@
                                 <rule>
                                     <element>BUNDLE</element>
                                     <!-- Whole-codebase coverage floor. The 0.90 target from the
-                                         coverage plan is met and then some (Phase 4 added
+                                         coverage plan is met and then some (Phase 5 added a real
+                                         @SpringBootTest context boot, on top of Phase 4's
                                          @WebMvcTest slices for all 8 controllers); this is now a
                                          real gate, not a ratchet climbing toward a future number.
                                          Set at the achieved values so it can still only go up.
@@ -281,15 +282,17 @@
                                          carries a little slack (e.g. 0.9651 rounds up and passes).
                                          Fine for a floor meant to stop decay. -->
                                     <limits>
-                                        <!-- Achieved after Phase 4 (@WebMvcTest for all 8
-                                             controllers, on top of Phases 1-3): 97.66%
-                                             (2049/2098). -->
+                                        <!-- Achieved after Phase 5 (ApplicationContextTest brought
+                                             api.config/SecurityConfig/PasswordEncoderConfig off
+                                             0%): 99.48% (2087/2098). -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
-                                            <minimum>0.97</minimum>
+                                            <minimum>0.99</minimum>
                                         </limit>
-                                        <!-- Achieved: 96.34% (368/382). -->
+                                        <!-- Unchanged since Phase 4: 96.34% (368/382). The classes
+                                             Phase 5 newly covers (SecurityConfig, OpenApiConfig,
+                                             PasswordEncoderConfig) have no branches. -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
