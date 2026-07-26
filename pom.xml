@@ -280,28 +280,39 @@
                                 <rule>
                                     <element>BUNDLE</element>
                                     <!-- Whole-codebase coverage floor. The 0.90 target from the
-                                         coverage plan is met and then some (Phase 5 added a real
-                                         @SpringBootTest context boot, on top of Phase 4's
-                                         @WebMvcTest slices for all 8 controllers); this is now a
-                                         real gate, not a ratchet climbing toward a future number.
-                                         Set at the achieved values so it can still only go up.
+                                         coverage plan is met and then some; this is a real gate,
+                                         not a ratchet climbing toward a future number.
 
                                          Note: JaCoCo rounds the measured ratio to the scale of the
                                          declared minimum before comparing, so a minimum of 0.97
                                          carries a little slack (e.g. 0.9651 rounds up and passes).
-                                         Fine for a floor meant to stop decay. -->
+                                         Fine for a floor meant to stop decay.
+
+                                         Deliberately NOT ratcheted after Phase 8, breaking the
+                                         every-phase-raises-the-floor habit of Phases 1-5, because
+                                         the next step up on either counter is brittle rather than
+                                         protective:
+                                           - BRANCH 0.96 -> 0.97 has *zero* headroom. Measured
+                                             0.965969 rounds to 0.97 and passes, but losing a
+                                             single branch gives 0.963351, which rounds to 0.96
+                                             and fails the build.
+                                           - LINE 0.99 -> 0.995 tolerates exactly one lost line
+                                             (0.994767 still rounds to 0.995); two fails.
+                                         A floor exists to stop decay, not to break the build when
+                                         someone adds a legitimate guard clause. Revisit only if
+                                         real headroom opens up. -->
                                     <limits>
-                                        <!-- Achieved after Phase 5 (ApplicationContextTest brought
-                                             api.config/SecurityConfig/PasswordEncoderConfig off
-                                             0%): 99.48% (2087/2098). -->
+                                        <!-- Achieved after Phase 8 (E2E coverage for the remaining
+                                             endpoint groups): 99.52% (2092/2102). The 10 uncovered
+                                             lines are FinanzasIaApplication.main, the unreachable
+                                             TransactionService guard documented above, and error
+                                             paths in GeminiExtractionService/UserDetailsServiceImpl. -->
                                         <limit>
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
                                             <minimum>0.99</minimum>
                                         </limit>
-                                        <!-- Unchanged since Phase 4: 96.34% (368/382). The classes
-                                             Phase 5 newly covers (SecurityConfig, OpenApiConfig,
-                                             PasswordEncoderConfig) have no branches. -->
+                                        <!-- Achieved after Phase 8: 96.60% (369/382). -->
                                         <limit>
                                             <counter>BRANCH</counter>
                                             <value>COVEREDRATIO</value>
