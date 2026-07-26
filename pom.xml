@@ -144,6 +144,15 @@
             <artifactId>spring-security-test</artifactId>
             <scope>test</scope>
         </dependency>
+        <!-- Test-only. TestRestTemplate otherwise falls back to SimpleClientHttpRequestFactory,
+             which is built on HttpURLConnection and rejects PATCH outright ("Invalid HTTP
+             method: PATCH"). The E2E tests for the set-default endpoints need it. Version is
+             managed by the Spring Boot parent BOM. -->
+        <dependency>
+            <groupId>org.apache.httpcomponents.client5</groupId>
+            <artifactId>httpclient5</artifactId>
+            <scope>test</scope>
+        </dependency>
 
         <!-- TestContainers (integration tests) -->
         <dependency>
